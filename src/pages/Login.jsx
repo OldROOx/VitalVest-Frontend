@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '../components/atoms/Button'
 import { FormField } from '../components/molecules/FormField'
 import { Icon } from '../components/atoms/Icon'
+import { authService } from '../services/authService'
 
 export default function Login({ onLogin }) {
     const [formData, setFormData] = useState({
@@ -13,13 +14,41 @@ export default function Login({ onLogin }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        setIsLoading(true)
 
-        // Simulación de login
-        setTimeout(() => {
+        // Validaciones básicas
+        const newErrors = {}
+        if (!formData.email.trim()) {
+            newErrors.email = 'El email es requerido'
+        }
+        if (!formData.password.trim()) {
+            newErrors.password = 'La contraseña es requerida'
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors)
+            return
+        }
+
+        setIsLoading(true)
+        setErrors({})
+
+        try {
+            const result = await authService.login(formData)
+
+            if (result.success) {
+                onLogin() // Llama a la función para cambiar el estado en App
+            } else {
+                setErrors({
+                    general: result.error || 'Error al iniciar sesión'
+                })
+            }
+        } catch (error) {
+            setErrors({
+                general: 'Error de conexión. Verifica que la API esté funcionando.'
+            })
+        } finally {
             setIsLoading(false)
-            onLogin()
-        }, 1000)
+        }
     }
 
     const handleChange = (field) => (e) => {
@@ -55,10 +84,16 @@ export default function Login({ onLogin }) {
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
                     <form className="space-y-6" onSubmit={handleSubmit}>
+                        {errors.general && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                <p className="text-sm text-red-800">{errors.general}</p>
+                            </div>
+                        )}
+
                         <FormField
-                            label="Correo Electrónico"
-                            type="email"
-                            placeholder="usuario@ejemplo.com"
+                            label="Usuario / Email"
+                            type="text"
+                            placeholder="Ingresa tu usuario"
                             value={formData.email}
                             onChange={handleChange('email')}
                             error={errors.email}
@@ -82,9 +117,15 @@ export default function Login({ onLogin }) {
                             disabled={isLoading}
                             className="w-full"
                         >
-                            {isLoading ? 'Ingresando...' : 'Ingresar al Sistema'}
+                            {isLoading ? 'Verificando...' : 'Ingresar al Sistema'}
                         </Button>
                     </form>
+
+                    <div className="mt-6 text-center">
+                        <p className="text-xs text-gray-500">
+                            Conectado a: localhost:8080
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

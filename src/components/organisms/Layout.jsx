@@ -3,7 +3,7 @@ import { Icon } from '../atoms/Icon'
 import { Button } from '../atoms/Button'
 import { NavigationItem } from '../molecules/NavigationItem'
 
-export default function Layout({ children, currentPage, onNavigate, onLogout }) {
+export default function Layout({ children, currentPage, onNavigate, onLogout, currentUser }) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
 
     const navigation = [
@@ -52,7 +52,9 @@ export default function Layout({ children, currentPage, onNavigate, onLogout }) 
                                 <Icon name="user" size={20} />
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-gray-900">Usuario</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                    {currentUser?.username || 'Usuario'}
+                                </p>
                                 <p className="text-xs text-gray-500">Conectado</p>
                             </div>
                         </div>
@@ -61,6 +63,7 @@ export default function Layout({ children, currentPage, onNavigate, onLogout }) 
                             size="sm"
                             onClick={onLogout}
                             className="p-2"
+                            title="Cerrar sesión"
                         >
                             <Icon name="close" size={16} />
                         </Button>
