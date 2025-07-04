@@ -1,10 +1,12 @@
 // Servicio para manejar autenticación con la API
-const API_BASE_URL = 'http://localhost:8080'; // Cambia por la URL de tu API
+const API_BASE_URL = 'http://localhost:8080'; // URL de tu API Go
 
 export const authService = {
     async login(credentials) {
         try {
-            const response = await fetch(`${API_BASE_URL}/login`, {
+            console.log('Intentando login con:', credentials.email);
+
+            const response = await fetch(`${API_BASE_URL}/login/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -16,6 +18,7 @@ export const authService = {
             });
 
             const data = await response.json();
+            console.log('Respuesta del servidor:', data);
 
             if (!response.ok) {
                 throw new Error(data.error || 'Error en el login');
@@ -39,7 +42,7 @@ export const authService = {
             console.error('Error en login:', error);
             return {
                 success: false,
-                error: error.message
+                error: error.message || 'Error de conexión con el servidor'
             };
         }
     },

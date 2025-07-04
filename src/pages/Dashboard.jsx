@@ -1,35 +1,36 @@
+// src/pages/Dashboard.jsx
 import { DashboardStats } from '../components/organisms/DashboardStats'
-import { Chart } from '../components/molecules/Chart'
-import { MetricCard } from '../components/molecules/MetricCard'
+import { SimpleChart } from '../components/molecules/SimpleChart.jsx' // ← Cambio aquí
 
 export default function Dashboard() {
     // Datos simulados
     const stats = {
         bodyTemp: 36.9,
-        steps: 2100,
+        steps: 8200,
         ambientTemp: 25.9,
         hydration: 71
     }
 
-    const chartData = [
-        { label: '06:00', value: 35 },
-        { label: '08:00', value: 60 },
-        { label: '10:00', value: 80 },
-        { label: '12:00', value: 95 },
-        { label: '14:00', value: 75 },
-        { label: '16:00', value: 85 },
-        { label: '18:00', value: 100 },
-        { label: '20:00', value: 90 }
+    // Datos para gráfico de pasos diarios (barras)
+    const stepsData = [
+        { label: 'Lun', value: 6800 },
+        { label: 'Mar', value: 8200 },
+        { label: 'Mié', value: 7500 },
+        { label: 'Jue', value: 9100 },
+        { label: 'Vie', value: 7800 },
+        { label: 'Sáb', value: 10200 },
+        { label: 'Dom', value: 6400 }
     ]
 
+    // Datos para gráfico de temperatura corporal (línea)
     const temperatureData = [
-        { label: '00:00', value: 60 },
-        { label: '04:00', value: 55 },
-        { label: '08:00', value: 70 },
-        { label: '12:00', value: 85 },
-        { label: '16:00', value: 90 },
-        { label: '20:00', value: 75 },
-        { label: '24:00', value: 65 }
+        { label: '00:00', value: 36.2 },
+        { label: '04:00', value: 35.8 },
+        { label: '08:00', value: 36.5 },
+        { label: '12:00', value: 37.1 },
+        { label: '16:00', value: 37.3 },
+        { label: '20:00', value: 36.8 },
+        { label: '24:00', value: 36.4 }
     ]
 
     const recommendations = [
@@ -57,18 +58,20 @@ export default function Dashboard() {
             {/* Stats Cards */}
             <DashboardStats stats={stats} />
 
-            {/* Charts Section */}
+            {/* Charts Section con Chart.js */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Gráfico de pasos diarios */}
                 <div className="bg-white rounded-lg border border-gray-200">
-                    <Chart
+                    <SimpleChart
                         type="bar"
                         title="Pasos Diarios"
-                        data={chartData}
+                        data={stepsData}
                     />
                 </div>
 
+                {/* Gráfico de temperatura corporal */}
                 <div className="bg-white rounded-lg border border-gray-200">
-                    <Chart
+                    <SimpleChart
                         type="line"
                         title="Temperatura Corporal (24h)"
                         data={temperatureData}
@@ -85,8 +88,11 @@ export default function Dashboard() {
                             <span className="text-sm text-gray-600">Nivel actual</span>
                             <span className="text-lg font-semibold text-blue-600">71%</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: '71%' }}></div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div
+                                className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                                style={{ width: '71%' }}
+                            />
                         </div>
                         <p className="text-xs text-gray-500">
                             Nivel detectado por sensor GSR
