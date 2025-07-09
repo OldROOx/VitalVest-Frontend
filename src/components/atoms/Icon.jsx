@@ -1,15 +1,14 @@
 export const Icon = ({ name, size = 20, className = '', color = 'currentColor' }) => {
-    // Para el logo VitalVest, usar la imagen directamente
+    // Logo VitalVest simple - V correcta en SVG
     if (name === 'vitalvest') {
         return (
-            <img
-                src="/vitalvest-logo.png"
-                alt="VitalVest Logo"
-                width={size}
-                height={size}
-                className={className}
-                style={{ filter: color === 'white' ? 'brightness(0) invert(1)' : 'none' }}
-            />
+            <svg width={size} height={size} className={className} viewBox="0 0 24 24">
+                <path
+                    d="M3 4 L12 20 L21 4 L18 4 L12 14 L6 4 Z"
+                    fill={color === 'white' ? 'white' : '#3B82F6'}
+                    stroke="none"
+                />
+            </svg>
         )
     }
 
