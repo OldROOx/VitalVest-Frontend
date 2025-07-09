@@ -1,4 +1,18 @@
 export const Icon = ({ name, size = 20, className = '', color = 'currentColor' }) => {
+    // Para el logo VitalVest, usar la imagen directamente
+    if (name === 'vitalvest') {
+        return (
+            <img
+                src="/vitalvest-logo.png"
+                alt="VitalVest Logo"
+                width={size}
+                height={size}
+                className={className}
+                style={{ filter: color === 'white' ? 'brightness(0) invert(1)' : 'none' }}
+            />
+        )
+    }
+
     const icons = {
         dashboard: (
             <svg width={size} height={size} className={className} fill={color} viewBox="0 0 20 20">

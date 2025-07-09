@@ -22,7 +22,7 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
                 <div className="p-6 border-b border-gray-200">
                     <div className="flex items-center space-x-3">
                         <div className="bg-blue-600 p-2 rounded-lg">
-                            <Icon name="heart" size={24} color="white" />
+                            <Icon name="vitalvest" size={32} color="white" />
                         </div>
                         <div>
                             <h1 className="text-xl font-bold text-gray-900">VitalVest</h1>

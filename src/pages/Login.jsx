@@ -70,7 +70,7 @@ export default function Login({ onLogin }) {
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="flex justify-center">
                     <div className="bg-blue-600 p-3 rounded-lg">
-                        <Icon name="heart" size={32} color="white" />
+                        <Icon name="vitalvest" size={48} color="white" />
                     </div>
                 </div>
                 <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">

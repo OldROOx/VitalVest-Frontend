@@ -1,250 +1,220 @@
-// src/components/molecules/Chart.jsx
-import { useEffect, useRef } from 'react'
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler
-} from 'chart.js'
-
-// Registrar componentes de Chart.js
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler
-)
-
 export const Chart = ({
                           data,
                           type = 'line',
                           title,
                           className = ''
                       }) => {
-    const chartRef = useRef(null)
-    const chartInstance = useRef(null)
+    // Gráfico de línea preciso con ejes y sombreado
+    if (type === 'line') {
+        const maxValue = Math.max(...data.map(d => d.value))
+        const minValue = Math.min(...data.map(d => d.value))
+        const range = maxValue - minValue || 1
 
-    useEffect(() => {
-        if (!chartRef.current || !data) return
+        // Dimensiones del SVG
+        const svgWidth = 500
+        const svgHeight = 300
+        const paddingLeft = 50
+        const paddingRight = 30
+        const paddingTop = 30
+        const paddingBottom = 50
+        const chartWidth = svgWidth - paddingLeft - paddingRight
+        const chartHeight = svgHeight - paddingTop - paddingBottom
 
-        // Destruir gráfico previo si existe
-        if (chartInstance.current) {
-            chartInstance.current.destroy()
-        }
-
-        const ctx = chartRef.current.getContext('2d')
-
-        // Configuración para gráfico de barras (pasos)
-        if (type === 'bar') {
-            chartInstance.current = new ChartJS(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.map(item => item.label),
-                    datasets: [{
-                        label: 'Pasos',
-                        data: data.map(item => item.value),
-                        backgroundColor: '#3B82F6',
-                        borderColor: '#2563EB',
-                        borderWidth: 1,
-                        borderRadius: 4,
-                        borderSkipped: false,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: '#1F2937',
-                            titleColor: '#F9FAFB',
-                            bodyColor: '#F9FAFB',
-                            borderColor: '#374151',
-                            borderWidth: 1,
-                            cornerRadius: 8,
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.parsed.y.toLocaleString()} pasos`
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: '#F3F4F6',
-                                lineWidth: 1
-                            },
-                            ticks: {
-                                color: '#6B7280',
-                                font: {
-                                    size: 12
-                                },
-                                callback: function(value) {
-                                    return value >= 1000 ? (value/1000).toFixed(1) + 'k' : value
-                                }
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                color: '#6B7280',
-                                font: {
-                                    size: 12,
-                                    weight: '500'
-                                }
-                            }
-                        }
-                    }
-                }
+        // Generar ticks para el eje Y
+        const yTicks = []
+        const tickCount = 6
+        for (let i = 0; i <= tickCount; i++) {
+            const value = minValue + (range / tickCount) * i
+            yTicks.push({
+                value: value,
+                y: paddingTop + chartHeight - (i / tickCount) * chartHeight,
+                label: value.toFixed(1)
             })
         }
 
-        // Configuración para gráfico de línea (temperatura)
-        if (type === 'line') {
-            chartInstance.current = new ChartJS(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.map(item => item.label),
-                    datasets: [{
-                        label: 'Temperatura',
-                        data: data.map(item => item.value),
-                        borderColor: '#3B82F6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#3B82F6',
-                        pointBorderColor: '#FFFFFF',
-                        pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        pointHoverBackgroundColor: '#2563EB',
-                        pointHoverBorderColor: '#FFFFFF',
-                        pointHoverBorderWidth: 3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: '#1F2937',
-                            titleColor: '#F9FAFB',
-                            bodyColor: '#F9FAFB',
-                            borderColor: '#374151',
-                            borderWidth: 1,
-                            cornerRadius: 8,
-                            displayColors: false,
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.parsed.y.toFixed(1)}°C`
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            grid: {
-                                color: '#F3F4F6',
-                                lineWidth: 1
-                            },
-                            ticks: {
-                                color: '#6B7280',
-                                font: {
-                                    size: 12
-                                },
-                                callback: function(value) {
-                                    return value.toFixed(1) + '°C'
-                                }
-                            },
-                            min: Math.min(...data.map(d => d.value)) - 0.2,
-                            max: Math.max(...data.map(d => d.value)) + 0.2
-                        },
-                        x: {
-                            grid: {
-                                color: '#F3F4F6',
-                                lineWidth: 1
-                            },
-                            ticks: {
-                                color: '#6B7280',
-                                font: {
-                                    size: 12,
-                                    weight: '500'
-                                }
-                            }
-                        }
-                    }
-                }
-            })
-        }
+        // Calcular puntos de la gráfica
+        const points = data.map((item, index) => {
+            const x = paddingLeft + (index / (data.length - 1)) * chartWidth
+            const y = paddingTop + (1 - (item.value - minValue) / range) * chartHeight
+            return { x, y, value: item.value, label: item.label }
+        })
 
-        return () => {
-            if (chartInstance.current) {
-                chartInstance.current.destroy()
-            }
-        }
-    }, [data, type])
+        // Crear path para la línea
+        const pathData = points.map((point, index) => {
+            return `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
+        }).join(' ')
 
-    // Limpiar al desmontar componente
-    useEffect(() => {
-        return () => {
-            if (chartInstance.current) {
-                chartInstance.current.destroy()
-            }
-        }
-    }, [])
+        // Crear path para el área sombreada
+        const areaPath = `${pathData} L ${points[points.length - 1].x} ${paddingTop + chartHeight} L ${paddingLeft} ${paddingTop + chartHeight} Z`
 
-    const totalSteps = type === 'bar' && data ?
-        data.reduce((sum, item) => sum + item.value, 0) : 0
+        return (
+            <div className={`p-6 ${className}`}>
+                {title && <h3 className="text-lg font-semibold mb-6 text-gray-900">{title}</h3>}
 
-    const avgTemp = type === 'line' && data ?
-        (data.reduce((sum, item) => sum + item.value, 0) / data.length) : 0
+                <div className="relative bg-white rounded-lg border border-gray-200 p-4">
+                    <svg
+                        width={svgWidth}
+                        height={svgHeight}
+                        className="w-full h-auto"
+                        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                    >
+                        {/* Definiciones */}
+                        <defs>
+                            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style={{stopColor: '#3B82F6', stopOpacity: 0.3}} />
+                                <stop offset="100%" style={{stopColor: '#3B82F6', stopOpacity: 0.1}} />
+                            </linearGradient>
+                        </defs>
 
-    return (
-        <div className={`p-6 ${className}`}>
-            {title && <h3 className="text-lg font-semibold text-gray-900 mb-6">{title}</h3>}
+                        {/* Líneas de cuadrícula horizontal */}
+                        {yTicks.map((tick, index) => (
+                            <line
+                                key={index}
+                                x1={paddingLeft}
+                                y1={tick.y}
+                                x2={paddingLeft + chartWidth}
+                                y2={tick.y}
+                                stroke="#F3F4F6"
+                                strokeWidth="1"
+                            />
+                        ))}
 
-            <div className="relative h-64">
-                <canvas ref={chartRef}></canvas>
+                        {/* Líneas de cuadrícula vertical */}
+                        {points.map((point, index) => (
+                            <line
+                                key={index}
+                                x1={point.x}
+                                y1={paddingTop}
+                                x2={point.x}
+                                y2={paddingTop + chartHeight}
+                                stroke="#F3F4F6"
+                                strokeWidth="1"
+                            />
+                        ))}
+
+                        {/* Ejes principales */}
+                        <line
+                            x1={paddingLeft}
+                            y1={paddingTop}
+                            x2={paddingLeft}
+                            y2={paddingTop + chartHeight}
+                            stroke="#6B7280"
+                            strokeWidth="2"
+                        />
+                        <line
+                            x1={paddingLeft}
+                            y1={paddingTop + chartHeight}
+                            x2={paddingLeft + chartWidth}
+                            y2={paddingTop + chartHeight}
+                            stroke="#6B7280"
+                            strokeWidth="2"
+                        />
+
+                        {/* Área sombreada */}
+                        <path
+                            d={areaPath}
+                            fill="url(#areaGradient)"
+                            stroke="none"
+                        />
+
+                        {/* Línea principal */}
+                        <path
+                            d={pathData}
+                            fill="none"
+                            stroke="#3B82F6"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+
+                        {/* Puntos */}
+                        {points.map((point, index) => (
+                            <g key={index}>
+                                <circle
+                                    cx={point.x}
+                                    cy={point.y}
+                                    r="5"
+                                    fill="#3B82F6"
+                                    stroke="#ffffff"
+                                    strokeWidth="2"
+                                />
+                            </g>
+                        ))}
+
+                        {/* Etiquetas del eje Y */}
+                        {yTicks.map((tick, index) => (
+                            <text
+                                key={index}
+                                x={paddingLeft - 10}
+                                y={tick.y + 5}
+                                textAnchor="end"
+                                fontSize="12"
+                                fill="#6B7280"
+                                fontFamily="system-ui, sans-serif"
+                            >
+                                {tick.label}
+                            </text>
+                        ))}
+
+                        {/* Etiquetas del eje X */}
+                        {points.map((point, index) => (
+                            <text
+                                key={index}
+                                x={point.x}
+                                y={paddingTop + chartHeight + 20}
+                                textAnchor="middle"
+                                fontSize="12"
+                                fill="#6B7280"
+                                fontFamily="system-ui, sans-serif"
+                            >
+                                {point.label}
+                            </text>
+                        ))}
+                    </svg>
+                </div>
             </div>
+        )
+    }
 
-            {/* Estadísticas adicionales */}
-            <div className="mt-4 text-center">
-                {type === 'bar' && (
+    // Gráfico de barras
+    if (type === 'bar') {
+        const maxValue = Math.max(...data.map(d => d.value))
+
+        return (
+            <div className={`p-6 ${className}`}>
+                {title && <h3 className="text-lg font-semibold mb-6 text-gray-900">{title}</h3>}
+
+                <div className="relative h-52 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4">
+                    <div className="flex items-end justify-between h-full space-x-3">
+                        {data.map((item, index) => (
+                            <div key={index} className="flex-1 flex flex-col items-center">
+                                <div className="w-full relative">
+                                    <div
+                                        className="bg-gradient-to-t from-blue-500 to-blue-400 w-full rounded-t-lg shadow-md transition-all duration-500 ease-out hover:shadow-lg"
+                                        style={{
+                                            height: `${Math.min((item.value / maxValue) * 190, 190)}px`,
+                                            minHeight: '10px'
+                                        }}
+                                    />
+                                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-transparent to-white opacity-20 rounded-t-lg"></div>
+                                </div>
+                                <span className="text-xs text-gray-600 mt-3 font-medium">
+                                    {item.label}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Resumen */}
+                <div className="mt-4 text-center">
                     <p className="text-sm text-gray-500">
-                        Total esta semana: {totalSteps.toLocaleString()} pasos
+                        Total esta semana: <span className="font-semibold text-gray-700">{data.reduce((sum, item) => sum + item.value, 0).toLocaleString()}</span> pasos
                     </p>
-                )}
-                {type === 'line' && (
-                    <p className="text-sm text-gray-500">
-                        Temperatura promedio: {avgTemp.toFixed(1)}°C
-                    </p>
-                )}
+                </div>
             </div>
-        </div>
-    )
+        )
+    }
+
+    return null
 }
