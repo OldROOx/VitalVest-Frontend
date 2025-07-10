@@ -1,10 +1,14 @@
-import { useState } from 'react'
-import { Icon } from '../atoms/Icon'
-import { Button } from '../atoms/Button'
-import { NavigationItem } from '../molecules/NavigationItem'
+// src/components/organisms/Layout.jsx
+import { useState } from 'react';
+import { Icon } from '../atoms/Icon';
+import { Button } from '../atoms/Button';
+import { NavigationItem } from '../molecules/NavigationItem';
+import { WebSocketIndicator } from '../molecules/WebSocketIndicator';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export default function Layout({ children, currentPage, onNavigate, onLogout, currentUser }) {
-    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const { isConnected, lastMessage, reconnect } = useWebSocket();
 
     const navigation = [
         { id: 'dashboard', name: 'Dashboard', icon: 'dashboard' },
@@ -12,7 +16,7 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
         { id: 'alerts', name: 'Alertas', icon: 'alerts' },
         { id: 'configuration', name: 'Configuración', icon: 'config' },
         { id: 'sync', name: 'Sincronización', icon: 'sync' }
-    ]
+    ];
 
     return (
         <div className="flex h-screen bg-gray-50">
@@ -29,6 +33,15 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
                             <p className="text-sm text-gray-500">Panel de Control Local</p>
                         </div>
                     </div>
+                </div>
+
+                {/* WebSocket Status en el sidebar */}
+                <div className="p-4 border-b border-gray-200">
+                    <WebSocketIndicator
+                        isConnected={isConnected}
+                        lastMessage={lastMessage}
+                        onReconnect={reconnect}
+                    />
                 </div>
 
                 {/* Navigation */}
@@ -74,17 +87,29 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
             {/* Main content */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Top header */}
-                <header className="bg-white shadow-sm border-b border-gray-200 lg:hidden">
+                <header className="bg-white shadow-sm border-b border-gray-200">
                     <div className="flex items-center justify-between p-4">
-                        <Button
-                            variant="secondary"
-                            onClick={() => setSidebarOpen(!sidebarOpen)}
-                            className="p-2"
-                        >
-                            <Icon name="menu" size={20} />
-                        </Button>
-                        <h1 className="text-lg font-semibold text-gray-900">VitalVest</h1>
-                        <div className="w-8" /> {/* Spacer */}
+                        <div className="flex items-center space-x-4">
+                            <Button
+                                variant="secondary"
+                                onClick={() => setSidebarOpen(!sidebarOpen)}
+                                className="p-2 lg:hidden"
+                            >
+                                <Icon name="menu" size={20} />
+                            </Button>
+                            <h1 className="text-lg font-semibold text-gray-900 lg:hidden">VitalVest</h1>
+                        </div>
+
+                        {/* WebSocket status en el header (visible en móvil) */}
+                        <div className="flex items-center space-x-4">
+                            <div className="lg:hidden">
+                                <WebSocketIndicator
+                                    isConnected={isConnected}
+                                    lastMessage={lastMessage}
+                                    onReconnect={reconnect}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </header>
 
@@ -102,5 +127,5 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
                 />
             )}
         </div>
-    )
+    );
 }
