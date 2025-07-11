@@ -1,4 +1,4 @@
-// src/services/apiService.js
+// src/services/apiService.js - Adaptado para tu API Go
 const API_BASE_URL = 'http://localhost:8080';
 
 class ApiService {
@@ -108,12 +108,13 @@ class ApiService {
         }
     }
 
-    // Obtener datos del sensor BME280
+    // Obtener datos del sensor BME280 - ADAPTADO A TU API
     async getBMEData() {
         try {
             const response = await fetch(`${API_BASE_URL}/bme`);
             if (!response.ok) throw new Error(`BME HTTP ${response.status}`);
             const result = await response.json();
+            // Tu API devuelve: { "BME": [...] }
             return result.BME || [];
         } catch (error) {
             console.error('Error obteniendo datos BME:', error);
@@ -121,12 +122,13 @@ class ApiService {
         }
     }
 
-    // Obtener datos del sensor GSR
+    // Obtener datos del sensor GSR - ADAPTADO A TU API
     async getGSRData() {
         try {
             const response = await fetch(`${API_BASE_URL}/gsr`);
             if (!response.ok) throw new Error(`GSR HTTP ${response.status}`);
             const result = await response.json();
+            // Tu API devuelve: { "GSR": [...] }
             return result.GSR || [];
         } catch (error) {
             console.error('Error obteniendo datos GSR:', error);
@@ -134,12 +136,13 @@ class ApiService {
         }
     }
 
-    // Obtener datos del sensor MLX90614
+    // Obtener datos del sensor MLX90614 - ADAPTADO A TU API
     async getMLXData() {
         try {
             const response = await fetch(`${API_BASE_URL}/mlx`);
             if (!response.ok) throw new Error(`MLX HTTP ${response.status}`);
             const result = await response.json();
+            // Tu API devuelve: { "MLX": [...] }
             return result.MLX || [];
         } catch (error) {
             console.error('Error obteniendo datos MLX:', error);
@@ -147,12 +150,13 @@ class ApiService {
         }
     }
 
-    // Obtener datos del sensor MPU6050
+    // Obtener datos del sensor MPU6050 - ADAPTADO A TU API
     async getMPUData() {
         try {
             const response = await fetch(`${API_BASE_URL}/mpu`);
             if (!response.ok) throw new Error(`MPU HTTP ${response.status}`);
             const result = await response.json();
+            // Tu API devuelve: { "MPU": [...] }
             return result.MPU || [];
         } catch (error) {
             console.error('Error obteniendo datos MPU:', error);
@@ -160,12 +164,13 @@ class ApiService {
         }
     }
 
-    // Obtener usuarios
+    // Obtener usuarios - ADAPTADO A TU API
     async getUsers() {
         try {
             const response = await fetch(`${API_BASE_URL}/users`);
             if (!response.ok) throw new Error(`Users HTTP ${response.status}`);
             const users = await response.json();
+            // Tu API devuelve directamente el array de usuarios
             return users || [];
         } catch (error) {
             console.error('Error obteniendo usuarios:', error);
@@ -186,11 +191,18 @@ class ApiService {
         return {
             // Datos actuales (más recientes)
             current: {
+                // BME280 - Datos ambientales
                 temperatura_ambiente: latestBME?.temperatura_ambiente || null,
                 humedad_relativa: latestBME?.humedad_relativa || null,
+
+                // GSR - Hidratación
                 conductancia: latestGSR?.conductancia || null,
                 estado_hidratacion: latestGSR?.estado_hidratacion || null,
+
+                // MLX90614 - Temperatura corporal
                 temperatura_corporal: latestMLX?.temperatura_corporal || null,
+
+                // MPU6050 - Movimiento y actividad
                 aceleracion_x: latestMPU?.aceleracion_x || null,
                 aceleracion_y: latestMPU?.aceleracion_y || null,
                 aceleracion_z: latestMPU?.aceleracion_z || null,
@@ -226,7 +238,7 @@ class ApiService {
         const avgAmbientTemp = bmeTemps.length > 0 ?
             bmeTemps.reduce((a, b) => a + b, 0) / bmeTemps.length : null;
 
-        // Estadísticas de hidratación
+        // Estadísticas de hidratación (convertir conductancia a porcentaje)
         const gsrValues = GSR?.map(d => d.conductancia).filter(c => c != null) || [];
         const avgHydration = gsrValues.length > 0 ?
             (gsrValues.reduce((a, b) => a + b, 0) / gsrValues.length) * 100 : null;
@@ -256,59 +268,18 @@ class ApiService {
         };
     }
 
-    // Métodos para obtener datos específicos por ID
-    async getBMEById(id) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/bme/${id}`);
-            if (!response.ok) throw new Error(`BME by ID HTTP ${response.status}`);
-            return await response.json();
-        } catch (error) {
-            console.error(`Error obteniendo BME ${id}:`, error);
-            return null;
-        }
-    }
-
-    async getGSRById(id) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/gsr/${id}`);
-            if (!response.ok) throw new Error(`GSR by ID HTTP ${response.status}`);
-            return await response.json();
-        } catch (error) {
-            console.error(`Error obteniendo GSR ${id}:`, error);
-            return null;
-        }
-    }
-
-    async getMLXById(id) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/mlx/${id}`);
-            if (!response.ok) throw new Error(`MLX by ID HTTP ${response.status}`);
-            return await response.json();
-        } catch (error) {
-            console.error(`Error obteniendo MLX ${id}:`, error);
-            return null;
-        }
-    }
-
-    async getMPUById(id) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/mpu/${id}`);
-            if (!response.ok) throw new Error(`MPU by ID HTTP ${response.status}`);
-            return await response.json();
-        } catch (error) {
-            console.error(`Error obteniendo MPU ${id}:`, error);
-            return null;
-        }
-    }
-
-    // Métodos para crear nuevos registros
+    // Métodos para crear nuevos registros - USANDO TU API
     async createBME(data) {
         try {
             const response = await fetch(`${API_BASE_URL}/bme`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    temperatura_ambiente: data.temperatura_ambiente,
+                    humedad_relativa: data.humedad_relativa
+                })
             });
+            if (!response.ok) throw new Error(`Error creando BME: ${response.status}`);
             return await response.json();
         } catch (error) {
             console.error('Error creando BME:', error);
@@ -321,8 +292,12 @@ class ApiService {
             const response = await fetch(`${API_BASE_URL}/gsr`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    conductancia: data.conductancia,
+                    estado_hidratacion: data.estado_hidratacion
+                })
             });
+            if (!response.ok) throw new Error(`Error creando GSR: ${response.status}`);
             return await response.json();
         } catch (error) {
             console.error('Error creando GSR:', error);
@@ -335,8 +310,11 @@ class ApiService {
             const response = await fetch(`${API_BASE_URL}/mlx`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    temperatura_corporal: data.temperatura_corporal
+                })
             });
+            if (!response.ok) throw new Error(`Error creando MLX: ${response.status}`);
             return await response.json();
         } catch (error) {
             console.error('Error creando MLX:', error);
@@ -349,8 +327,15 @@ class ApiService {
             const response = await fetch(`${API_BASE_URL}/mpu`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    aceleracion_x: data.aceleracion_x,
+                    aceleracion_y: data.aceleracion_y,
+                    aceleracion_z: data.aceleracion_z,
+                    pasos: data.pasos,
+                    nivel_actividad: data.nivel_actividad
+                })
             });
+            if (!response.ok) throw new Error(`Error creando MPU: ${response.status}`);
             return await response.json();
         } catch (error) {
             console.error('Error creando MPU:', error);

@@ -17,7 +17,6 @@ export default function Configuration() {
         isLoading,
         error,
         currentValues,
-        sensorHistory,
         users,
         refreshData,
         startPolling,
@@ -368,3 +367,80 @@ export default function Configuration() {
                                 </div>
                             </div>
                         )}
+
+                        {/* MLX90614 */}
+                        {currentValues.temperatura_corporal !== null && (
+                            <div className="bg-red-50 p-4 rounded-lg">
+                                <h4 className="font-medium text-red-900">MLX90614</h4>
+                                <div className="space-y-1 mt-2">
+                                    <p className="text-sm text-red-700">
+                                        Temp Corporal: {currentValues.temperatura_corporal?.toFixed(1) || '--'}°C
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* MPU6050 */}
+                        {(currentValues.pasos !== null || currentValues.aceleracion_x !== null) && (
+                            <div className="bg-purple-50 p-4 rounded-lg">
+                                <h4 className="font-medium text-purple-900">MPU6050</h4>
+                                <div className="space-y-1 mt-2">
+                                    <p className="text-sm text-purple-700">
+                                        Pasos: {currentValues.pasos || '--'}
+                                    </p>
+                                    <p className="text-sm text-purple-700">
+                                        Actividad: {currentValues.nivel_actividad || '--'}
+                                    </p>
+                                    {currentValues.aceleracion_x !== null && (
+                                        <p className="text-sm text-purple-700">
+                                            Accel: {currentValues.aceleracion_x?.toFixed(2) || '--'} g
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Configuration Settings */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    <Icon name="config" size={20} className="inline mr-2" />
+                    Configuración Avanzada
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 className="font-medium text-gray-700 mb-2">Frecuencia de Muestreo</h4>
+                        <FormField label="Intervalo de lectura (segundos)">
+                            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="1">1 segundo</option>
+                                <option value="2">2 segundos</option>
+                                <option value="3" selected>3 segundos</option>
+                                <option value="5">5 segundos</option>
+                                <option value="10">10 segundos</option>
+                            </select>
+                        </FormField>
+                    </div>
+                    <div>
+                        <h4 className="font-medium text-gray-700 mb-2">Alertas</h4>
+                        <div className="space-y-2">
+                            <label className="flex items-center">
+                                <input type="checkbox" className="mr-2" defaultChecked />
+                                <span className="text-sm">Alertas de temperatura</span>
+                            </label>
+                            <label className="flex items-center">
+                                <input type="checkbox" className="mr-2" defaultChecked />
+                                <span className="text-sm">Alertas de hidratación</span>
+                            </label>
+                            <label className="flex items-center">
+                                <input type="checkbox" className="mr-2" />
+                                <span className="text-sm">Alertas de inactividad</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
