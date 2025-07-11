@@ -7,10 +7,19 @@ export const useWebSocket = () => {
     const [lastMessage, setLastMessage] = useState(null);
     const [connectionError, setConnectionError] = useState(null);
     const [sensorData, setSensorData] = useState({
-        BME: null,
-        GSR: null,
-        MLX: null,
-        MPU: null
+        temperatura: null,
+        presion: null,
+        humedad: null,
+        aceleracion: {
+            x: null,
+            y: null,
+            z: null
+        },
+        giroscopio: {
+            x: null,
+            y: null,
+            z: null
+        }
     });
 
     const retryTimeoutRef = useRef(null);
@@ -24,13 +33,36 @@ export const useWebSocket = () => {
         });
 
         websocketService.onMessage((data) => {
-            setLastMessage(data);
+            setLastMessage({
+                ...data,
+                timestamp: new Date().toISOString()
+            });
+
             console.log('📨 Nuevos datos de sensores:', data);
 
-            // Actualizar datos de sensores
+            // Actualizar datos de sensores con la nueva estructura
             setSensorData(prevData => ({
+                // Mantener datos anteriores y actualizar con nuevos
                 ...prevData,
-                ...data
+
+                // Mapear los nuevos campos directos
+                temperatura: data.temperatura !== undefined ? data.temperatura : prevData.temperatura,
+                presion: data.presion !== undefined ? data.presion : prevData.presion,
+                humedad: data.humedad !== undefined ? data.humedad : prevData.humedad,
+
+                // Mapear aceleración si existe
+                aceleracion: {
+                    x: data.aceleracion?.x !== undefined ? data.aceleracion.x : prevData.aceleracion.x,
+                    y: data.aceleracion?.y !== undefined ? data.aceleracion.y : prevData.aceleracion.y,
+                    z: data.aceleracion?.z !== undefined ? data.aceleracion.z : prevData.aceleracion.z
+                },
+
+                // Mapear giroscopio si existe
+                giroscopio: {
+                    x: data.giroscopio?.x !== undefined ? data.giroscopio.x : prevData.giroscopio.x,
+                    y: data.giroscopio?.y !== undefined ? data.giroscopio.y : prevData.giroscopio.y,
+                    z: data.giroscopio?.z !== undefined ? data.giroscopio.z : prevData.giroscopio.z
+                }
             }));
         });
 
@@ -65,11 +97,46 @@ export const useWebSocket = () => {
         }, 1000);
     };
 
+    // Función para obtener datos simulados cuando no hay conexión (opcional)
+    const getSimulatedData = () => {
+        return {
+            temperatura: 25.5 + Math.random() * 10,
+            presion: 1013 + Math.random() * 50,
+            humedad: 45 + Math.random() * 30,
+            aceleracion: {
+                x: (Math.random() - 0.5) * 2,
+                y: (Math.random() - 0.5) * 2,
+                z: (Math.random() - 0.5) * 2
+            },
+            giroscopio: {
+                x: (Math.random() - 0.5) * 100,
+                y: (Math.random() - 0.5) * 100,
+                z: (Math.random() - 0.5) * 100
+            }
+        };
+    };
+
     return {
         isConnected,
         lastMessage,
         connectionError,
-        sensorData,
-        reconnect
+        sensorData: isConnected ? sensorData : getSimulatedData(),
+        reconnect,
+        // Funciones auxiliares para verificar si hay datos
+        hasTemperature: () => sensorData.temperatura !== null,
+        hasAcceleration: () => sensorData.aceleracion.x !== null,
+        hasGyroscope: () => sensorData.giroscopio.x !== null,
+        // Función para obtener resumen de los datos
+        getSensorSummary: () => ({
+            connected: isConnected,
+            dataPoints: {
+                temperatura: sensorData.temperatura !== null,
+                presion: sensorData.presion !== null,
+                humedad: sensorData.humedad !== null,
+                aceleracion: sensorData.aceleracion.x !== null,
+                giroscopio: sensorData.giroscopio.x !== null
+            },
+            lastUpdate: lastMessage?.timestamp
+        })
     };
 };

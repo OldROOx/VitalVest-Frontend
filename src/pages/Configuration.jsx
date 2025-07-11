@@ -4,53 +4,69 @@ import { Button } from '../components/atoms/Button'
 import { FormField } from '../components/molecules/FormField'
 import { SensorPanel } from '../components/organisms/SensorPanel'
 import { WebSocketTestButton } from '../components/molecules/WebSocketTestButton'
-import { WebSocketIndicator } from '../components/molecules/WebSocketIndicator'
-import { useWebSocket } from '../hooks/useWebSocket'
+import { useApi } from '../hooks/useApi'
 import { Badge } from '../components/atoms/Badge'
 import { Icon } from '../components/atoms/Icon'
 
 export default function Configuration() {
     const [userSelection, setUserSelection] = useState('')
-    const [connectionMode, setConnectionMode] = useState('offline')
-    const { isConnected, sensorData, reconnect } = useWebSocket()
+    const [connectionMode, setConnectionMode] = useState('online') // Cambiar a online por defecto
 
-    // Datos simulados de sensores con estado actual
+    const {
+        isConnected,
+        isLoading,
+        error,
+        currentValues,
+        sensorHistory,
+        users,
+        refreshData,
+        startPolling,
+        stopPolling,
+        isPollingActive,
+        checkServerStatus
+    } = useApi({
+        autoStart: true,
+        pollingInterval: 3000
+    });
+
+    // Configuración de sensores basada en datos reales de la API
     const sensors = [
         {
             id: 1,
-            name: 'Sensor GSR',
-            status: sensorData.GSR ? 'Activo' : 'Inactivo',
-            lastReading: sensorData.GSR ?
-                `${(sensorData.GSR.conductancia * 100).toFixed(1)}%` :
-                'Sin datos',
-            icon: 'droplet'
-        },
-        {
-            id: 2,
-            name: 'Sensor BME280',
-            status: sensorData.BME ? 'Activo' : 'Inactivo',
-            lastReading: sensorData.BME ?
-                `${sensorData.BME.temperatura_ambiente.toFixed(1)}°C` :
+            name: 'Sensor BME280 (Ambiente)',
+            status: currentValues?.temperatura_ambiente !== null ? 'Activo' : 'Inactivo',
+            lastReading: currentValues?.temperatura_ambiente ?
+                `${currentValues.temperatura_ambiente.toFixed(1)}°C, ${currentValues.humedad_relativa?.toFixed(1)}%` :
                 'Sin datos',
             icon: 'thermometer'
         },
         {
-            id: 3,
-            name: 'Acelerómetro MPU6050',
-            status: sensorData.MPU ? 'Activo' : 'Inactivo',
-            lastReading: sensorData.MPU ?
-                `${sensorData.MPU.pasos} pasos` :
+            id: 2,
+            name: 'Sensor GSR (Hidratación)',
+            status: currentValues?.conductancia !== null ? 'Activo' : 'Inactivo',
+            lastReading: currentValues?.conductancia ?
+                `${currentValues.conductancia.toFixed(3)} - ${currentValues.estado_hidratacion}` :
                 'Sin datos',
-            icon: 'activity'
+            icon: 'droplet'
+        },
+        {
+            id: 3,
+            name: 'Sensor MLX90614 (Corporal)',
+            status: currentValues?.temperatura_corporal !== null ? 'Activo' : 'Inactivo',
+            lastReading: currentValues?.temperatura_corporal ?
+                `${currentValues.temperatura_corporal.toFixed(1)}°C` :
+                'Sin datos',
+            icon: 'heart'
         },
         {
             id: 4,
-            name: 'Sensor MLX90614',
-            status: sensorData.MLX ? 'Activo' : 'Inactivo',
-            lastReading: sensorData.MLX ?
-                `${sensorData.MLX.temperatura_corporal.toFixed(1)}°C` :
-                'Sin datos',
-            icon: 'heart'
+            name: 'Sensor MPU6050 (Movimiento)',
+            status: (currentValues?.aceleracion_x !== null || currentValues?.pasos !== null) ? 'Activo' : 'Inactivo',
+            lastReading: currentValues?.pasos !== null ?
+                `${currentValues.pasos} pasos - ${currentValues.nivel_actividad || 'N/A'}` :
+                currentValues?.aceleracion_x !== null ?
+                    `Aceleración detectada` : 'Sin datos',
+            icon: 'activity'
         }
     ]
 
@@ -62,8 +78,30 @@ export default function Configuration() {
 
     const handleToggleConnection = (mode) => {
         setConnectionMode(mode)
+        if (mode === 'online') {
+            startPolling(3000)
+        } else {
+            stopPolling()
+        }
         alert(`Modo ${mode === 'online' ? 'Online' : 'Offline'} activado`)
     }
+
+    const handleTestConnection = async () => {
+        const status = await checkServerStatus()
+        if (status) {
+            alert(`Servidor conectado: ${status.message || 'OK'}`)
+        } else {
+            alert('No se pudo conectar al servidor')
+        }
+    }
+
+    const getDataPointsActive = () => {
+        const active = Object.values(currentValues || {}).filter(value => value !== null).length
+        const total = Object.keys(currentValues || {}).length
+        return { active, total }
+    }
+
+    const dataPoints = getDataPointsActive()
 
     return (
         <div className="space-y-6">
@@ -72,32 +110,76 @@ export default function Configuration() {
                 <p className="text-sm text-gray-500">Gestión de usuarios, sensores y conectividad</p>
             </div>
 
-            {/* WebSocket Status and Test */}
+            {/* API Status and Control */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     <Icon name="wifi" size={20} className="inline mr-2" />
-                    Estado del WebSocket
+                    Estado de la API
                 </h3>
 
                 <div className="flex items-center justify-between mb-4">
-                    <WebSocketIndicator
-                        isConnected={isConnected}
-                        onReconnect={reconnect}
-                    />
-                    <WebSocketTestButton />
+                    <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                            <div className={`w-3 h-3 rounded-full ${
+                                isLoading ? 'bg-yellow-500 animate-pulse' :
+                                    isConnected ? 'bg-green-500' : 'bg-red-500'
+                            }`}></div>
+                            <span className="text-sm font-medium">
+                                {isLoading ? 'Conectando...' :
+                                    isConnected ? 'API Conectada' : 'API Desconectada'}
+                            </span>
+                        </div>
+                        <Badge variant={isPollingActive ? 'success' : 'default'} size="sm">
+                            Polling: {isPollingActive ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                        <span className="text-xs text-gray-500">
+                            Datos activos: {dataPoints.active}/{dataPoints.total}
+                        </span>
+                    </div>
+
+                    <div className="flex space-x-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleTestConnection}
+                            disabled={isLoading}
+                        >
+                            <Icon name="wifi" size={16} />
+                            Probar Conexión
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={refreshData}
+                            disabled={isLoading}
+                        >
+                            <Icon name="sync" size={16} className={isLoading ? 'animate-spin' : ''} />
+                            Actualizar
+                        </Button>
+                        <WebSocketTestButton />
+                    </div>
                 </div>
 
                 {isConnected ? (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                         <p className="text-green-800 text-sm">
-                            ✅ WebSocket conectado correctamente. Los datos se actualizan en tiempo real.
+                            ✅ Conectado a la API en http://localhost:8080. Los datos se actualizan automáticamente.
                         </p>
+                        <div className="mt-2 text-xs text-green-700">
+                            <p>Endpoints disponibles: /bme, /gsr, /mlx, /mpu, /users</p>
+                            <p>Frecuencia de actualización: {isPollingActive ? '3 segundos' : 'Manual'}</p>
+                        </div>
                     </div>
                 ) : (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <p className="text-yellow-800 text-sm">
-                            ⚠️ WebSocket desconectado. Ejecutando en modo offline con datos simulados.
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p className="text-red-800 text-sm">
+                            ❌ No se puede conectar a la API. Verifica que el servidor esté ejecutándose.
                         </p>
+                        {error && (
+                            <p className="text-red-700 text-xs mt-1">
+                                Error: {error.message}
+                            </p>
+                        )}
                     </div>
                 )}
             </div>
@@ -108,7 +190,7 @@ export default function Configuration() {
                     <Icon name="user" size={20} className="inline mr-2" />
                     Selección de Usuario
                 </h3>
-                <p className="text-sm text-gray-600 mb-4">Asociar chaleco con usuario activo</p>
+                <p className="text-sm text-gray-600 mb-4">Asociar chaleco con usuario activo de la base de datos</p>
 
                 <div className="flex items-center space-x-4">
                     <div className="flex-1">
@@ -119,9 +201,20 @@ export default function Configuration() {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="">Seleccionar usuario</option>
-                                <option value="Juan Pérez">Juan Pérez</option>
-                                <option value="María García">María García</option>
-                                <option value="Carlos López">Carlos López</option>
+                                {users && users.length > 0 ? (
+                                    users.map((user, index) => (
+                                        <option key={index} value={user.Name || user.name || `Usuario ${index + 1}`}>
+                                            {user.Name || user.name || `Usuario ${index + 1}`}
+                                            {user.Age && ` (${user.Age} años)`}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <>
+                                        <option value="Juan Pérez">Juan Pérez (Por defecto)</option>
+                                        <option value="María García">María García (Por defecto)</option>
+                                        <option value="Carlos López">Carlos López (Por defecto)</option>
+                                    </>
+                                )}
                             </select>
                         </FormField>
                     </div>
@@ -136,15 +229,23 @@ export default function Configuration() {
                         </Button>
                     </div>
                 </div>
+
+                {users && users.length > 0 && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-blue-800 text-sm">
+                            📊 Se encontraron {users.length} usuarios en la base de datos
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Connection Mode */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     <Icon name="wifi" size={20} className="inline mr-2" />
-                    Modo de Conexión
+                    Modo de Operación
                 </h3>
-                <p className="text-sm text-gray-600 mb-4">Configurar funcionamiento online u offline</p>
+                <p className="text-sm text-gray-600 mb-4">Configurar modo de funcionamiento del sistema</p>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -152,13 +253,13 @@ export default function Configuration() {
                             <Icon name="wifi" size={20} className="text-green-600" />
                             <div>
                                 <h4 className="font-medium text-gray-900">Modo Online</h4>
-                                <p className="text-sm text-gray-500">Sincronización automática con servidor</p>
+                                <p className="text-sm text-gray-500">Conexión continua con API y base de datos</p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-500">
+                            <Badge variant={connectionMode === 'online' ? 'success' : 'default'} size="sm">
                                 {connectionMode === 'online' ? 'Activo' : 'Inactivo'}
-                            </span>
+                            </Badge>
                             <button
                                 onClick={() => handleToggleConnection('online')}
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -179,17 +280,17 @@ export default function Configuration() {
                             <Icon name="wifi" size={20} className="text-gray-400" />
                             <div>
                                 <h4 className="font-medium text-gray-900">Modo Offline</h4>
-                                <p className="text-sm text-gray-500">Almacenamiento local únicamente</p>
+                                <p className="text-sm text-gray-500">Solo almacenamiento local, sin conexión API</p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-500">
+                            <Badge variant={connectionMode === 'offline' ? 'warning' : 'default'} size="sm">
                                 {connectionMode === 'offline' ? 'Activo' : 'Inactivo'}
-                            </span>
+                            </Badge>
                             <button
                                 onClick={() => handleToggleConnection('offline')}
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                    connectionMode === 'offline' ? 'bg-blue-600' : 'bg-gray-200'
+                                    connectionMode === 'offline' ? 'bg-yellow-600' : 'bg-gray-200'
                                 }`}
                             >
                                 <span
@@ -201,17 +302,25 @@ export default function Configuration() {
                         </div>
                     </div>
 
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className={`border rounded-lg p-4 ${
+                        connectionMode === 'online' ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+                    }`}>
                         <div className="flex items-start space-x-2">
-                            <Icon name="alerts" size={16} className="text-yellow-600 mt-0.5" />
+                            <Icon name="alerts" size={16} className={`mt-0.5 ${
+                                connectionMode === 'online' ? 'text-green-600' : 'text-yellow-600'
+                            }`} />
                             <div>
-                                <p className="text-sm text-yellow-800">
-                                    <strong>Modo actual: {connectionMode === 'online' ? 'Online' : 'Offline'}</strong>
+                                <p className={`text-sm font-medium ${
+                                    connectionMode === 'online' ? 'text-green-800' : 'text-yellow-800'
+                                }`}>
+                                    Modo actual: {connectionMode === 'online' ? 'Online' : 'Offline'}
                                 </p>
-                                <p className="text-xs text-yellow-700 mt-1">
+                                <p className={`text-xs mt-1 ${
+                                    connectionMode === 'online' ? 'text-green-700' : 'text-yellow-700'
+                                }`}>
                                     {connectionMode === 'online'
-                                        ? 'Los datos se almacenan localmente en la Raspberry Pi y se sincronizan automáticamente'
-                                        : 'Modo sin conexión activo. La sincronización no está disponible.'
+                                        ? 'Los datos se obtienen directamente de la API y base de datos MySQL'
+                                        : 'Modo sin conexión activo. Los datos no se actualizarán automáticamente.'
                                     }
                                 </p>
                             </div>
@@ -224,80 +333,38 @@ export default function Configuration() {
             <SensorPanel sensors={sensors} />
 
             {/* Real-time Sensor Data Preview */}
-            {isConnected && Object.keys(sensorData).some(key => sensorData[key]) && (
+            {isConnected && currentValues && Object.keys(currentValues).some(key => currentValues[key] !== null) && (
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                        Vista Previa de Datos en Tiempo Real
+                        Vista Previa de Datos en Tiempo Real (API)
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {sensorData.BME && (
+                        {/* BME280 */}
+                        {(currentValues.temperatura_ambiente !== null || currentValues.humedad_relativa !== null) && (
                             <div className="bg-blue-50 p-4 rounded-lg">
                                 <h4 className="font-medium text-blue-900">BME280</h4>
-                                <p className="text-sm text-blue-700">
-                                    Temp: {sensorData.BME.temperatura_ambiente?.toFixed(1)}°C
-                                </p>
-                                <p className="text-sm text-blue-700">
-                                    Humedad: {sensorData.BME.humedad_relativa?.toFixed(1)}%
-                                </p>
+                                <div className="space-y-1 mt-2">
+                                    <p className="text-sm text-blue-700">
+                                        Temp: {currentValues.temperatura_ambiente?.toFixed(1) || '--'}°C
+                                    </p>
+                                    <p className="text-sm text-blue-700">
+                                        Humedad: {currentValues.humedad_relativa?.toFixed(1) || '--'}%
+                                    </p>
+                                </div>
                             </div>
                         )}
 
-                        {sensorData.GSR && (
+                        {/* GSR */}
+                        {(currentValues.conductancia !== null || currentValues.estado_hidratacion) && (
                             <div className="bg-green-50 p-4 rounded-lg">
                                 <h4 className="font-medium text-green-900">GSR</h4>
-                                <p className="text-sm text-green-700">
-                                    Conductancia: {sensorData.GSR.conductancia?.toFixed(3)}
-                                </p>
-                                <p className="text-sm text-green-700">
-                                    Estado: {sensorData.GSR.estado_hidratacion}
-                                </p>
+                                <div className="space-y-1 mt-2">
+                                    <p className="text-sm text-green-700">
+                                        Conductancia: {currentValues.conductancia?.toFixed(3) || '--'}
+                                    </p>
+                                    <p className="text-sm text-green-700">
+                                        Estado: {currentValues.estado_hidratacion || '--'}
+                                    </p>
+                                </div>
                             </div>
                         )}
-
-                        {sensorData.MLX && (
-                            <div className="bg-red-50 p-4 rounded-lg">
-                                <h4 className="font-medium text-red-900">MLX90614</h4>
-                                <p className="text-sm text-red-700">
-                                    Temp. Corporal: {sensorData.MLX.temperatura_corporal?.toFixed(1)}°C
-                                </p>
-                            </div>
-                        )}
-
-                        {sensorData.MPU && (
-                            <div className="bg-purple-50 p-4 rounded-lg">
-                                <h4 className="font-medium text-purple-900">MPU6050</h4>
-                                <p className="text-sm text-purple-700">
-                                    Pasos: {sensorData.MPU.pasos}
-                                </p>
-                                <p className="text-sm text-purple-700">
-                                    Actividad: {sensorData.MPU.nivel_actividad}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* System Information */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Información del Sistema</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600">Versión del Sistema</p>
-                        <p className="text-lg font-semibold text-gray-900">v2.1.3</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600">Raspberry Pi</p>
-                        <p className="text-lg font-semibold text-gray-900">Pi 4 Model B</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600">WebSocket</p>
-                        <Badge variant={isConnected ? 'success' : 'danger'}>
-                            {isConnected ? 'Conectado' : 'Desconectado'}
-                        </Badge>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
