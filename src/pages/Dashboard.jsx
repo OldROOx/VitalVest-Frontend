@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx - VERSION MEJORADA Y PROBADA
+// src/pages/Dashboard.jsx - VERSION LIMPIA SIN DATOS API
 import { useState, useEffect } from 'react';
 import { DashboardStats } from '../components/organisms/DashboardStats';
 import { Chart } from '../components/molecules/Chart';
@@ -330,8 +330,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <DashboardStats stats={stats} />
+
 
             {/* DATOS EN TIEMPO REAL DEL WEBSOCKET - VERSION ROBUSTA */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -570,53 +569,6 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Real-time sensor data API - Solo mostrar si NO hay WebSocket */}
-            {!hasValidWebSocketData() && currentValues && Object.keys(currentValues).some(key => currentValues[key] !== null) && (
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                        Datos de la API (Backup)
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="text-center">
-                            <p className="text-sm text-gray-600">BME280 - Ambiente</p>
-                            <p className="text-xl font-bold text-blue-600">
-                                {currentValues.temperatura_ambiente?.toFixed(1) || '--'}°C
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                Humedad: {currentValues.humedad_relativa?.toFixed(1) || '--'}%
-                            </p>
-                        </div>
-
-                        <div className="text-center">
-                            <p className="text-sm text-gray-600">GSR - Hidratación</p>
-                            <p className="text-xl font-bold text-green-600">
-                                {currentValues.conductancia?.toFixed(3) || '--'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                Estado: {currentValues.estado_hidratacion || '--'}
-                            </p>
-                        </div>
-
-                        <div className="text-center">
-                            <p className="text-sm text-gray-600">MLX90614 - Corporal</p>
-                            <p className="text-xl font-bold text-red-600">
-                                {currentValues.temperatura_corporal?.toFixed(1) || '--'}°C
-                            </p>
-                        </div>
-
-                        <div className="text-center">
-                            <p className="text-sm text-gray-600">MPU6050 - Actividad</p>
-                            <p className="text-xl font-bold text-purple-600">
-                                {currentValues.pasos || '--'} pasos
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                Nivel: {currentValues.nivel_actividad || '--'}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-lg border border-gray-200">
@@ -652,7 +604,7 @@ export default function Dashboard() {
                             ></div>
                         </div>
                         <p className="text-xs text-gray-500">
-                            {hasValidWebSocketData() ? 'Datos WebSocket en tiempo real' : 'Datos simulados/API'}
+                            {hasValidWebSocketData() ? 'Datos WebSocket en tiempo real' : 'Datos simulados'}
                         </p>
                     </div>
                 </div>
