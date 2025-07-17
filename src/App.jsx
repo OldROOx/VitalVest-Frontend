@@ -70,18 +70,26 @@ function App() {
     }
 
     if (!isAuthenticated && currentPage === 'login') {
-        return renderPage()
+        return (
+            <div className="w-full h-screen">
+                {renderPage()}
+            </div>
+        )
     }
 
     return (
-        <Layout
-            currentPage={currentPage}
-            onNavigate={setCurrentPage}
-            onLogout={handleLogout}
-            currentUser={currentUser}
-        >
-            {renderPage()}
-        </Layout>
+        <div className="w-full h-screen layout-container">
+            <Layout
+                currentPage={currentPage}
+                onNavigate={setCurrentPage}
+                onLogout={handleLogout}
+                currentUser={currentUser}
+            >
+                <div className="main-content">
+                    {renderPage()}
+                </div>
+            </Layout>
+        </div>
     )
 }
 

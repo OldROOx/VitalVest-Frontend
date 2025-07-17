@@ -19,9 +19,11 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
     ];
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen w-full bg-gray-50 overflow-hidden">
             {/* Sidebar */}
-            <div className={`bg-white w-64 min-h-screen shadow-lg ${sidebarOpen ? 'block' : 'hidden'} lg:block`}>
+            <div className={`bg-white w-64 min-h-screen shadow-lg flex-shrink-0 ${
+                sidebarOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden'
+            } lg:relative lg:block`}>
                 {/* Header */}
                 <div className="p-6 border-b border-gray-200">
                     <div className="flex items-center space-x-3">
@@ -85,10 +87,10 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
             </div>
 
             {/* Main content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden min-w-0 w-full">
                 {/* Top header */}
-                <header className="bg-white shadow-sm border-b border-gray-200">
-                    <div className="flex items-center justify-between p-4">
+                <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
+                    <div className="flex items-center justify-between p-4 w-full">
                         <div className="flex items-center space-x-4">
                             <Button
                                 variant="secondary"
@@ -114,8 +116,10 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
                 </header>
 
                 {/* Page content */}
-                <main className="flex-1 overflow-auto p-6">
-                    {children}
+                <main className="flex-1 overflow-auto p-4 md:p-6 w-full bg-gray-50">
+                    <div className="w-full max-w-none">
+                        {children}
+                    </div>
                 </main>
             </div>
 
