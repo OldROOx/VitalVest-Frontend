@@ -7,6 +7,8 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { Badge } from '../components/atoms/Badge';
 import { Icon } from '../components/atoms/Icon';
 import { Button } from '../components/atoms/Button';
+import { MPURingChart } from '../components/molecules/MPURingChart';
+import { BodyTemperatureChart } from '../components/molecules/BodyTemperatureChart';
 
 export default function Dashboard() {
     const {
@@ -587,6 +589,22 @@ export default function Dashboard() {
                     />
                 </div>
             </div>
+
+            {/* SENSOR MPU6050 - GRÁFICA DE ANILLOS */}
+            {wsConnected && (
+                <MPURingChart
+                    data={{
+                        aceleracion: wsSensorData.aceleracion || { x: 0, y: 0, z: 0 },
+                        giroscopio: wsSensorData.giroscopio || { x: 0, y: 0, z: 0 }
+                    }}
+                />
+            )}
+
+            {/* TEMPERATURA CORPORAL - GRÁFICA TEMPORAL */}
+            <BodyTemperatureChart
+                data={wsSensorData?.temperatura}
+                isConnected={wsConnected}
+            />
 
             {/* Additional Metrics and Recommendations */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
