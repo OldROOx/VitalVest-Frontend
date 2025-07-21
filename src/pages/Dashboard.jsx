@@ -531,78 +531,10 @@ export default function Dashboard() {
             />
 
             {/* Additional Metrics and Recommendations */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado de Hidratación</h3>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Nivel actual</span>
-                            <span className="text-lg font-semibold text-blue-600">{stats.hydration.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                                style={{ width: `${Math.min(100, Math.max(0, stats.hydration))}%` }}
-                            ></div>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                            {hasValidWebSocketData() ? 'Datos WebSocket en tiempo real' : 'Datos simulados'}
-                        </p>
-                    </div>
-                </div>
 
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Alertas y Recomendaciones</h3>
-                    <div className="space-y-3">
-                        {getRecommendations().map((rec, index) => (
-                            <div
-                                key={index}
-                                className={`p-3 rounded-lg text-sm ${
-                                    rec.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
-                                        rec.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
-                                            rec.type === 'danger' ? 'bg-red-50 text-red-800 border border-red-200' :
-                                                'bg-blue-50 text-blue-800 border border-blue-200'
-                                }`}
-                            >
-                                {rec.text}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
 
             {/* Status de datos */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <h4 className="text-gray-800 font-medium mb-2">
-                    Estado de Fuentes de Datos:
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                        <span className="text-gray-600">WebSocket:</span>
-                        <span className={`ml-2 font-medium ${wsConnected ? 'text-green-600' : 'text-red-600'}`}>
-                            {wsConnected ? 'Conectado' : 'Desconectado'}
-                        </span>
-                    </div>
-                    <div>
-                        <span className="text-gray-600">API:</span>
-                        <span className={`ml-2 font-medium ${isConnected ? 'text-blue-600' : 'text-red-600'}`}>
-                            {isConnected ? 'Conectada' : 'Desconectada'}
-                        </span>
-                    </div>
-                    <div>
-                        <span className="text-gray-600">Gráficas:</span>
-                        <span className="ml-2 font-medium text-green-600">
-                            {temperatureHistory.length > 0 ? `${temperatureHistory.length} puntos` : 'Sin datos'}
-                        </span>
-                    </div>
-                    <div>
-                        <span className="text-gray-600">Sensores WS:</span>
-                        <span className="ml-2 font-medium text-purple-600">
-                            {hasValidWebSocketData() ? `${getActiveSensorsCount()} activos` : 'Sin datos'}
-                        </span>
-                    </div>
-                </div>
-            </div>
+
         </div>
     );
 }

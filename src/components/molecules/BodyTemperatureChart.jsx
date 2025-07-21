@@ -223,42 +223,7 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
                 <canvas ref={chartRef}></canvas>
             </div>
 
-            {/* Indicadores de rangos */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                <div className="flex items-center justify-between p-2 bg-green-50 rounded">
-                    <span className="text-green-700">Normal</span>
-                    <span className="font-medium text-green-800">36.1°C - 37.2°C</span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-yellow-50 rounded">
-                    <span className="text-yellow-700">Febrícula</span>
-                    <span className="font-medium text-yellow-800">37.3°C - 38.0°C</span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-red-50 rounded">
-                    <span className="text-red-700">Fiebre</span>
-                    <span className="font-medium text-red-800">&gt; 38.0°C</span>
-                </div>
-            </div>
 
-            {/* Recomendaciones */}
-            {stats.status !== 'Normal' && stats.status !== 'Sin datos' && (
-                <div className={`mt-4 p-4 rounded-lg border ${
-                    stats.status === 'Fiebre' ? 'bg-red-50 border-red-200' :
-                        stats.status === 'Febrícula' ? 'bg-yellow-50 border-yellow-200' :
-                            'bg-blue-50 border-blue-200'
-                }`}>
-                    <p className={`text-sm font-medium ${
-                        stats.status === 'Fiebre' ? 'text-red-800' :
-                            stats.status === 'Febrícula' ? 'text-yellow-800' :
-                                'text-blue-800'
-                    }`}>
-                        ⚠️ Atención: {
-                        stats.status === 'Fiebre' ? 'Temperatura elevada detectada. Se recomienda consultar con un médico.' :
-                            stats.status === 'Febrícula' ? 'Temperatura ligeramente elevada. Mantener en observación.' :
-                                'Temperatura baja detectada. Buscar abrigo y ambiente cálido.'
-                    }
-                    </p>
-                </div>
-            )}
         </div>
     );
 };
