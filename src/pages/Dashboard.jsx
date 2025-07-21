@@ -272,9 +272,7 @@ export default function Dashboard() {
                                 isLoading ? 'bg-yellow-500' :
                                     isConnected ? 'bg-blue-500' : 'bg-red-500'
                         } ${(wsConnected || isLoading) ? 'animate-pulse' : ''}`}></div>
-                        <span className="text-sm text-gray-600">
-                            {wsConnected ? 'WebSocket Conectado' : getConnectionStatus()}
-                        </span>
+
                     </div>
                     <p className="text-sm text-gray-500">
                         Última actualización: {getLastUpdateText()}
@@ -493,34 +491,8 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                {/* Información de estado */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div className="text-center">
-                            <span className="text-gray-600">Estado WebSocket:</span>
-                            <span className={`ml-2 font-medium ${wsConnected ? 'text-green-600' : 'text-red-600'}`}>
-                                {wsConnected ? 'Conectado' : 'Desconectado'}
-                            </span>
-                        </div>
-                        <div className="text-center">
-                            <span className="text-gray-600">Última actualización:</span>
-                            <span className="ml-2 font-medium text-blue-600">
-                                {getLastUpdateText()}
-                            </span>
-                        </div>
-                        <div className="text-center">
-                            <span className="text-gray-600">Sensores activos:</span>
-                            <span className="ml-2 font-medium text-purple-600">
-                                {getActiveSensorsCount()}/5
-                            </span>
-                        </div>
-                    </div>
-                    {lastMessage && (
-                        <p className="text-xs text-gray-500 text-center mt-2">
-                            Timestamp: {new Date(lastMessage.timestamp).toLocaleString('es-ES')}
-                        </p>
-                    )}
-                </div>
+
+
             </div>
 
             {/* Charts Section */}

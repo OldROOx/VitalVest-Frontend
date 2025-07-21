@@ -117,3 +117,271 @@ canvas {
 .read-the-docs {
   color: #888;
 }
+
+/* Agregar estas reglas al archivo App.css existente */
+
+/* Mejoras para el sidebar deslizable */
+.sidebar-collapsed {
+  width: 64px !important;
+}
+
+.sidebar-expanded {
+  width: 256px !important;
+}
+
+/* Transiciones suaves para el sidebar */
+.sidebar-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Barra de redimensionamiento */
+.resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.resize-handle:hover {
+  background-color: rgba(59, 130, 246, 0.3);
+}
+
+.resize-handle:active {
+  background-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Indicador visual de la barra de arrastre */
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  right: 50%;
+  top: 50%;
+  transform: translate(50%, -50%);
+  width: 2px;
+  height: 32px;
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 1px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.resize-handle:hover::after {
+  opacity: 1;
+}
+
+/* Animaciones para el contenido del sidebar */
+.sidebar-content {
+  opacity: 1;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.sidebar-content.hiding {
+  opacity: 0;
+}
+
+/* Tooltips para el modo colapsado */
+.sidebar-tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #1f2937;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 9999;
+}
+
+.sidebar-tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 4px solid transparent;
+  border-right-color: #1f2937;
+}
+
+/* Mostrar tooltip al hacer hover */
+.sidebar-item:hover .sidebar-tooltip {
+  opacity: 1;
+}
+
+/* Estilos para el arrastre activo */
+.sidebar-dragging {
+  user-select: none;
+  cursor: col-resize;
+}
+
+.sidebar-dragging * {
+  pointer-events: none;
+}
+
+/* Indicador de arrastre */
+.drag-indicator {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Botón de colapsar/expandir */
+.collapse-button {
+  position: absolute;
+  right: -12px;
+  top: 24px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.collapse-button:hover {
+  background-color: #f9fafb;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: scale(1.05);
+}
+
+.collapse-button:active {
+  transform: scale(0.95);
+}
+
+/* Animaciones de navegación */
+.nav-item {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  transform: translateX(2px);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 100%;
+  background-color: #3b82f6;
+  border-radius: 0 2px 2px 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1023px) {
+  .resize-handle {
+    display: none;
+  }
+
+  .collapse-button {
+    display: none;
+  }
+}
+
+/* Mejoras para accesibilidad */
+.sidebar-item[aria-expanded="true"] .sidebar-tooltip {
+  opacity: 1;
+}
+
+.sidebar-item:focus-within .sidebar-tooltip {
+  opacity: 1;
+}
+
+/* Estados de carga */
+.sidebar-loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.sidebar-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f4f6;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Mejoras para el scroll del sidebar */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 2px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+/* Animación de entrada del sidebar */
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.sidebar-enter {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+/* Animación de salida del sidebar */
+@keyframes slideOutToLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.sidebar-exit {
+  animation: slideOutToLeft 0.3s ease-in;
+}
