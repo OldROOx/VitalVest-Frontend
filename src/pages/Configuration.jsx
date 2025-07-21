@@ -14,15 +14,10 @@ export default function Configuration() {
 
     const {
         isConnected,
-        isLoading,
-        error,
         currentValues,
         users,
-        refreshData,
         startPolling,
         stopPolling,
-        isPollingActive,
-        checkServerStatus
     } = useApi({
         autoStart: true,
         pollingInterval: 3000
@@ -85,22 +80,11 @@ export default function Configuration() {
         alert(`Modo ${mode === 'online' ? 'Online' : 'Offline'} activado`)
     }
 
-    const handleTestConnection = async () => {
-        const status = await checkServerStatus()
-        if (status) {
-            alert(`Servidor conectado: ${status.message || 'OK'}`)
-        } else {
-            alert('No se pudo conectar al servidor')
-        }
-    }
 
-    const getDataPointsActive = () => {
-        const active = Object.values(currentValues || {}).filter(value => value !== null).length
-        const total = Object.keys(currentValues || {}).length
-        return { active, total }
-    }
 
-    const dataPoints = getDataPointsActive()
+
+
+
 
     return (
         <div className="space-y-6">
