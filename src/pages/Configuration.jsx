@@ -110,78 +110,7 @@ export default function Configuration() {
             </div>
 
             {/* API Status and Control */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    <Icon name="wifi" size={20} className="inline mr-2" />
-                    Estado de la API
-                </h3>
 
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-2">
-                            <div className={`w-3 h-3 rounded-full ${
-                                isLoading ? 'bg-yellow-500 animate-pulse' :
-                                    isConnected ? 'bg-green-500' : 'bg-red-500'
-                            }`}></div>
-                            <span className="text-sm font-medium">
-                                {isLoading ? 'Conectando...' :
-                                    isConnected ? 'API Conectada' : 'API Desconectada'}
-                            </span>
-                        </div>
-                        <Badge variant={isPollingActive ? 'success' : 'default'} size="sm">
-                            Polling: {isPollingActive ? 'Activo' : 'Inactivo'}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                            Datos activos: {dataPoints.active}/{dataPoints.total}
-                        </span>
-                    </div>
-
-                    <div className="flex space-x-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleTestConnection}
-                            disabled={isLoading}
-                        >
-                            <Icon name="wifi" size={16} />
-                            Probar Conexión
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={refreshData}
-                            disabled={isLoading}
-                        >
-                            <Icon name="sync" size={16} className={isLoading ? 'animate-spin' : ''} />
-                            Actualizar
-                        </Button>
-                        <WebSocketTestButton />
-                    </div>
-                </div>
-
-                {isConnected ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <p className="text-green-800 text-sm">
-                            ✅ Conectado a la API en http://localhost:8080. Los datos se actualizan automáticamente.
-                        </p>
-                        <div className="mt-2 text-xs text-green-700">
-                            <p>Endpoints disponibles: /bme, /gsr, /mlx, /mpu, /users</p>
-                            <p>Frecuencia de actualización: {isPollingActive ? '3 segundos' : 'Manual'}</p>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-red-800 text-sm">
-                            ❌ No se puede conectar a la API. Verifica que el servidor esté ejecutándose.
-                        </p>
-                        {error && (
-                            <p className="text-red-700 text-xs mt-1">
-                                Error: {error.message}
-                            </p>
-                        )}
-                    </div>
-                )}
-            </div>
 
             {/* User Selection */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">

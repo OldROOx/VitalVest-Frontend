@@ -283,54 +283,6 @@ export default function Dashboard() {
             </div>
 
             {/* Controles de conexión */}
-            <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center space-x-4">
-                    <Badge variant={wsConnected ? 'success' : 'default'}>
-                        WebSocket: {wsConnected ? 'Conectado' : 'Desconectado'}
-                    </Badge>
-                    <Badge variant={isConnected ? 'success' : 'danger'}>
-                        API: {isConnected ? 'Conectada' : 'Desconectada'}
-                    </Badge>
-                    {error && (
-                        <Badge variant="danger">
-                            Error: {error.message}
-                        </Badge>
-                    )}
-                    <span className="text-sm text-gray-600">
-                        Polling: {isPollingActive ? 'Activo' : 'Inactivo'}
-                    </span>
-                </div>
-                <div className="flex space-x-2">
-                    {!wsConnected && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={reconnect}
-                        >
-                            <Icon name="wifi" size={16} />
-                            Reconectar WS
-                        </Button>
-                    )}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={refreshData}
-                        disabled={isLoading}
-                    >
-                        <Icon name="sync" size={16} className={isLoading ? 'animate-spin' : ''} />
-                        Actualizar API
-                    </Button>
-                    {isPollingActive ? (
-                        <Button variant="secondary" size="sm" onClick={stopPolling}>
-                            Pausar
-                        </Button>
-                    ) : (
-                        <Button variant="primary" size="sm" onClick={() => startPolling(2000)}>
-                            Iniciar
-                        </Button>
-                    )}
-                </div>
-            </div>
 
 
 
