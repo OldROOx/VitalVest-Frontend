@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx - VERSION LIMPIA SIN DATOS API
+// src/pages/Dashboard.jsx - VERSION CORREGIDA CON GRÁFICAS FUNCIONALES
 import { useState, useEffect } from 'react';
 import { DashboardStats } from '../components/organisms/DashboardStats';
 import { Chart } from '../components/molecules/Chart';
@@ -38,52 +38,97 @@ export default function Dashboard() {
     // Estado para datos históricos de gráficos (WebSocket)
     const [temperatureHistory, setTemperatureHistory] = useState([]);
     const [activityHistory, setActivityHistory] = useState([]);
+    const [hasPendingUpdate, setHasPendingUpdate] = useState(false);
 
-    // Log para debug - puedes quitar esto después
+    // Datos iniciales para las gráficas
+    const initializeDefaultData = () => {
+        // Datos por defecto para temperatura (24 horas simuladas)
+        const defaultTempData = Array.from({ length: 24 }, (_, i) => ({
+            label: `${String(i).padStart(2, '0')}:00`,
+            value: 36.5 + (Math.random() - 0.5) * 0.8
+        }));
+
+        // Datos por defecto para actividad (días de la semana)
+        const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        const defaultActivityData = days.map(day => ({
+            label: day,
+            value: Math.floor(Math.random() * 5000 + 3000)
+        }));
+
+        setTemperatureHistory(defaultTempData);
+        setActivityHistory(defaultActivityData);
+    };
+
+    // Inicializar datos por defecto al montar el componente
     useEffect(() => {
-        console.log('🔍 Debug WebSocket Data:', {
-            wsConnected,
-            wsSensorData,
-            lastMessage
-        });
+        initializeDefaultData();
+    }, []);
+
+    // Log para debug
+    useEffect(() => {
+        if (wsConnected && wsSensorData) {
+            console.log('🔍 Debug WebSocket Data:', {
+                temperatura: wsSensorData.temperatura,
+                aceleracion: wsSensorData.aceleracion,
+                wsConnected,
+                lastMessage
+            });
+        }
     }, [wsConnected, wsSensorData, lastMessage]);
 
-    // Actualizar gráficas con datos del WebSocket
+    // Actualizar gráfica de temperatura con datos del WebSocket
     useEffect(() => {
-        if (wsConnected && wsSensorData?.temperatura !== null && wsSensorData?.temperatura !== undefined) {
+        if (wsConnected &&
+            wsSensorData?.temperatura !== null &&
+            wsSensorData?.temperatura !== undefined &&
+            !isNaN(wsSensorData.temperatura)) {
+
             console.log('📈 Actualizando gráfica de temperatura con:', wsSensorData.temperatura);
 
             setTemperatureHistory(prev => {
-                const newData = [...prev];
                 const currentTime = new Date().toLocaleTimeString('es-ES', {
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
+                    second: '2-digit'
                 });
 
+                const newData = [...prev];
+
+                // Agregar nuevo punto
                 newData.push({
                     label: currentTime,
-                    value: wsSensorData.temperatura
+                    value: parseFloat(wsSensorData.temperatura)
                 });
 
-                // Mantener solo las últimas 24 entradas
-                return newData.slice(-24);
+                // Mantener solo las últimas 20 entradas para mejor visualización
+                const result = newData.slice(-20);
+                console.log('📊 Nuevos datos de temperatura para gráfica:', result);
+                return result;
             });
+
+            setHasPendingUpdate(true);
         }
     }, [wsConnected, wsSensorData?.temperatura]);
 
+    // Actualizar gráfica de actividad basada en aceleración
     useEffect(() => {
-        if (wsConnected && wsSensorData?.aceleracion?.x !== null && wsSensorData?.aceleracion?.x !== undefined) {
-            // Simular pasos basado en aceleración
+        if (wsConnected &&
+            wsSensorData?.aceleracion?.x !== null &&
+            wsSensorData?.aceleracion?.x !== undefined) {
+
+            // Calcular magnitud de aceleración
             const accelerationMagnitude = Math.sqrt(
                 Math.pow(wsSensorData.aceleracion.x || 0, 2) +
                 Math.pow(wsSensorData.aceleracion.y || 0, 2) +
                 Math.pow(wsSensorData.aceleracion.z || 0, 2)
             );
 
-            // Convertir aceleración a pasos simulados
-            const estimatedSteps = Math.floor(accelerationMagnitude * 1000);
+            // Convertir aceleración a pasos estimados
+            const estimatedSteps = Math.floor(accelerationMagnitude * 500); // Factor ajustado
 
-            // Actualizar actividad por día de semana
+            console.log('🚶 Actualizando actividad - Aceleración:', accelerationMagnitude, 'Pasos estimados:', estimatedSteps);
+
+            // Actualizar actividad del día actual
             const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
             const today = new Date().getDay();
             const currentDay = days[today === 0 ? 6 : today - 1]; // Ajustar domingo
@@ -93,14 +138,14 @@ export default function Dashboard() {
                 const existingDayIndex = newData.findIndex(d => d.label === currentDay);
 
                 if (existingDayIndex >= 0) {
+                    // Incrementar pasos del día actual
                     newData[existingDayIndex].value += estimatedSteps;
                 } else {
-                    // Si no existe el día, crear estructura inicial
-                    const baseData = days.map(day => ({
+                    // Si no existe el día, crear estructura completa
+                    return days.map(day => ({
                         label: day,
                         value: day === currentDay ? estimatedSteps : Math.floor(Math.random() * 5000 + 3000)
                     }));
-                    return baseData;
                 }
 
                 return newData;
@@ -108,29 +153,19 @@ export default function Dashboard() {
         }
     }, [wsConnected, wsSensorData?.aceleracion]);
 
-    // Inicializar gráficas con datos por defecto
+    // Reset del flag de actualización pendiente
     useEffect(() => {
-        if (temperatureHistory.length === 0) {
-            const defaultTempData = Array.from({ length: 8 }, (_, i) => ({
-                label: `${String(i * 3).padStart(2, '0')}:00`,
-                value: 36.5 + (Math.random() - 0.5) * 0.8
-            }));
-            setTemperatureHistory(defaultTempData);
+        if (hasPendingUpdate) {
+            const timeout = setTimeout(() => {
+                setHasPendingUpdate(false);
+            }, 1000);
+            return () => clearTimeout(timeout);
         }
-
-        if (activityHistory.length === 0) {
-            const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-            const defaultActivityData = days.map(day => ({
-                label: day,
-                value: Math.floor(Math.random() * 5000 + 3000)
-            }));
-            setActivityHistory(defaultActivityData);
-        }
-    }, []);
+    }, [hasPendingUpdate]);
 
     // Funciones helper seguras
     const isValidNumber = (value) => {
-        return value !== null && value !== undefined && !isNaN(value);
+        return value !== null && value !== undefined && !isNaN(value) && isFinite(value);
     };
 
     const getSafeValue = (value, fallback = 0) => {
@@ -173,7 +208,9 @@ export default function Dashboard() {
             wsSensorData.temperatura :
             (currentValues?.temperatura_corporal || 36.5),
 
-        steps: currentValues?.pasos || 0,
+        steps: currentValues?.pasos ||
+            (activityHistory.length > 0 ?
+                activityHistory.reduce((sum, day) => sum + day.value, 0) / 7 : 0),
 
         ambientTemp: wsConnected && isValidNumber(wsSensorData?.temperatura) ?
             wsSensorData.temperatura :
@@ -182,68 +219,6 @@ export default function Dashboard() {
         hydration: wsConnected && isValidNumber(wsSensorData?.humedad) ?
             wsSensorData.humedad :
             (currentValues?.conductancia ? (currentValues.conductancia * 100) : 65)
-    };
-
-    const getRecommendations = () => {
-        const recommendations = [];
-
-        // Recomendación basada en temperatura
-        if (stats.bodyTemp > 37.5) {
-            recommendations.push({
-                type: 'danger',
-                text: '🌡️ Temperatura elevada - Buscar lugar fresco y hidratarse'
-            });
-        } else if (stats.bodyTemp < 36.0) {
-            recommendations.push({
-                type: 'warning',
-                text: '🌡️ Temperatura baja - Abrigarse adecuadamente'
-            });
-        } else {
-            recommendations.push({
-                type: 'success',
-                text: '✅ Temperatura en rango normal'
-            });
-        }
-
-        // Recomendación basada en actividad
-        if (stats.steps < 3000) {
-            recommendations.push({
-                type: 'warning',
-                text: '🚶 Actividad física baja - Aumentar movimiento'
-            });
-        } else if (stats.steps > 8000) {
-            recommendations.push({
-                type: 'success',
-                text: '🎯 ¡Excelente! Meta de pasos alcanzada'
-            });
-        }
-
-        // Recomendación basada en hidratación
-        if (stats.hydration < 50) {
-            recommendations.push({
-                type: 'danger',
-                text: '💧 Hidratación crítica - Beber agua inmediatamente'
-            });
-        } else if (stats.hydration < 60) {
-            recommendations.push({
-                type: 'warning',
-                text: '💧 Hidratación baja - Recomendable beber agua'
-            });
-        } else {
-            recommendations.push({
-                type: 'info',
-                text: '💧 Hidratación adecuada - Mantener rutina actual'
-            });
-        }
-
-        return recommendations;
-    };
-
-    const getConnectionStatus = () => {
-        if (isLoading) return 'Cargando API...';
-        if (error) return 'Error API';
-        if (isConnected) return 'API Conectada';
-        return 'API Desconectada';
     };
 
     const getLastUpdateText = () => {
@@ -255,10 +230,16 @@ export default function Dashboard() {
         const now = new Date();
         const diffSeconds = Math.floor((now - updateTime) / 1000);
 
-        if (diffSeconds < 30) return 'Ahora mismo';
+        if (diffSeconds < 10) return 'Ahora mismo';
         if (diffSeconds < 60) return `hace ${diffSeconds}s`;
         if (diffSeconds < 3600) return `hace ${Math.floor(diffSeconds / 60)}m`;
         return `hace ${Math.floor(diffSeconds / 3600)}h`;
+    };
+
+    // Función para forzar actualización de las gráficas
+    const refreshCharts = () => {
+        setHasPendingUpdate(true);
+        console.log('🔄 Forzando actualización de gráficas');
     };
 
     return (
@@ -272,19 +253,30 @@ export default function Dashboard() {
                                 isLoading ? 'bg-yellow-500' :
                                     isConnected ? 'bg-blue-500' : 'bg-red-500'
                         } ${(wsConnected || isLoading) ? 'animate-pulse' : ''}`}></div>
-
+                        <span className="text-sm text-gray-600">
+                            {wsConnected ? 'WebSocket Conectado' :
+                                isConnected ? 'API Conectada' : 'Desconectado'}
+                        </span>
                     </div>
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={refreshCharts}
+                        className="flex items-center space-x-1"
+                    >
+                        <Icon name="sync" size={14} />
+                        <span>Actualizar</span>
+                    </Button>
                     <p className="text-sm text-gray-500">
                         Última actualización: {getLastUpdateText()}
                     </p>
                 </div>
             </div>
 
-            {/* Controles de conexión */}
+            {/* Stats Cards */}
+            <DashboardStats stats={stats} />
 
-
-
-            {/* DATOS EN TIEMPO REAL DEL WEBSOCKET - VERSION ROBUSTA */}
+            {/* DATOS EN TIEMPO REAL DEL WEBSOCKET */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -301,6 +293,17 @@ export default function Dashboard() {
                             <Badge variant="success" size="sm">
                                 Conectado
                             </Badge>
+                        )}
+                        {!wsConnected && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={reconnect}
+                                className="flex items-center space-x-1"
+                            >
+                                <Icon name="sync" size={12} />
+                                <span>Reconectar</span>
+                            </Button>
                         )}
                     </div>
                 </div>
@@ -416,7 +419,7 @@ export default function Dashboard() {
                                     Math.pow(getSafeValue(wsSensorData.aceleracion.y), 2) +
                                     Math.pow(getSafeValue(wsSensorData.aceleracion.z), 2)
                                 ).toFixed(2) : '--'
-                            } g
+                            }g
                         </p>
                         <p className={`text-xs mt-1 ${
                             isValidNumber(wsSensorData?.aceleracion?.x) ? 'text-purple-600' : 'text-gray-500'
@@ -426,115 +429,87 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Detalle de sensores avanzados */}
-                {(isValidNumber(wsSensorData?.aceleracion?.x) || isValidNumber(wsSensorData?.giroscopio?.x)) && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Aceleración detallada */}
-                        {isValidNumber(wsSensorData?.aceleracion?.x) && (
-                            <div className="bg-gray-50 rounded-lg p-4">
-                                <h4 className="text-md font-medium text-gray-800 mb-3 flex items-center">
-                                    <Icon name="activity" size={16} className="mr-2" />
-                                    Aceleración (g)
-                                </h4>
-                                <div className="grid grid-cols-3 gap-4 text-center">
-                                    <div>
-                                        <p className="text-sm text-gray-600">Eje X</p>
-                                        <p className="text-lg font-semibold text-indigo-600">
-                                            {formatValue(wsSensorData.aceleracion.x, 3)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Eje Y</p>
-                                        <p className="text-lg font-semibold text-indigo-600">
-                                            {formatValue(wsSensorData.aceleracion.y, 3)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Eje Z</p>
-                                        <p className="text-lg font-semibold text-indigo-600">
-                                            {formatValue(wsSensorData.aceleracion.z, 3)}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Giroscopio detallado */}
-                        {isValidNumber(wsSensorData?.giroscopio?.x) && (
-                            <div className="bg-gray-50 rounded-lg p-4">
-                                <h4 className="text-md font-medium text-gray-800 mb-3 flex items-center">
-                                    <Icon name="sync" size={16} className="mr-2" />
-                                    Giroscopio (°/s)
-                                </h4>
-                                <div className="grid grid-cols-3 gap-4 text-center">
-                                    <div>
-                                        <p className="text-sm text-gray-600">Eje X</p>
-                                        <p className="text-lg font-semibold text-purple-600">
-                                            {formatValue(wsSensorData.giroscopio.x)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Eje Y</p>
-                                        <p className="text-lg font-semibold text-purple-600">
-                                            {formatValue(wsSensorData.giroscopio.y)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Eje Z</p>
-                                        <p className="text-lg font-semibold text-purple-600">
-                                            {formatValue(wsSensorData.giroscopio.z)}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-
 
             </div>
 
-            {/* Charts Section */}
+            {/* Charts Section - CON DATOS REALES */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Gráfica de Actividad */}
                 <div className="bg-white rounded-lg border border-gray-200">
-                    <Chart
-                        type="bar"
-                        title="Actividad Semanal"
-                        data={activityHistory}
-                    />
+                    {activityHistory.length > 0 ? (
+                        <Chart
+                            type="bar"
+                            title={`Actividad Semanal ${wsConnected ? '(Tiempo Real)' : '(Simulada)'}`}
+                            data={activityHistory}
+                            key={`activity-${hasPendingUpdate}-${activityHistory.length}`}
+                        />
+                    ) : (
+                        <div className="p-6 text-center text-gray-500">
+                            <p>Cargando datos de actividad...</p>
+                        </div>
+                    )}
                 </div>
 
+                {/* Gráfica de Temperatura */}
                 <div className="bg-white rounded-lg border border-gray-200">
-                    <Chart
-                        type="line"
-                        title={`Temperatura ${wsConnected ? '(Tiempo Real - WebSocket)' : '(Simulada)'}`}
-                        data={temperatureHistory}
-                    />
+                    {temperatureHistory.length > 0 ? (
+                        <Chart
+                            type="line"
+                            title={`Temperatura ${wsConnected ? '(Tiempo Real - WebSocket)' : '(Simulada)'}`}
+                            data={temperatureHistory}
+                            key={`temperature-${hasPendingUpdate}-${temperatureHistory.length}-${temperatureHistory[temperatureHistory.length - 1]?.value}`}
+                        />
+                    ) : (
+                        <div className="p-6 text-center text-gray-500">
+                            <p>Cargando datos de temperatura...</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* SENSOR MPU6050 - GRÁFICA DE ANILLOS */}
-            {wsConnected && (
+            {wsConnected && hasValidWebSocketData() && (
                 <MPURingChart
                     data={{
                         aceleracion: wsSensorData.aceleracion || { x: 0, y: 0, z: 0 },
                         giroscopio: wsSensorData.giroscopio || { x: 0, y: 0, z: 0 }
                     }}
+                    isConnected={wsConnected}
                 />
             )}
 
             {/* TEMPERATURA CORPORAL - GRÁFICA TEMPORAL */}
-            <BodyTemperatureChart
-                data={wsSensorData?.temperatura}
-                isConnected={wsConnected}
-            />
+            {wsConnected && (
+                <BodyTemperatureChart
+                    data={wsSensorData?.temperatura}
+                    isConnected={wsConnected}
+                />
+            )}
 
-            {/* Additional Metrics and Recommendations */}
-
-
-            {/* Status de datos */}
-
+            {/* Status de conexión y datos */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h4 className="font-medium text-gray-800 mb-2">Estado del Sistema</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="flex justify-between">
+                        <span>WebSocket:</span>
+                        <Badge variant={wsConnected ? 'success' : 'danger'} size="sm">
+                            {wsConnected ? 'Conectado' : 'Desconectado'}
+                        </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>API:</span>
+                        <Badge variant={isConnected ? 'success' : 'danger'} size="sm">
+                            {isConnected ? 'Conectada' : 'Desconectada'}
+                        </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>Sensores Activos:</span>
+                        <Badge variant={getActiveSensorsCount() > 0 ? 'success' : 'default'} size="sm">
+                            {getActiveSensorsCount()}
+                        </Badge>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
