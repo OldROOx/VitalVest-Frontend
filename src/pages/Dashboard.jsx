@@ -242,6 +242,30 @@ export default function Dashboard() {
         console.log('🔄 Forzando actualización de gráficas');
     };
 
+    // Función para probar las gráficas con datos simulados
+    const testCharts = () => {
+        console.log('🧪 Probando gráficas con datos simulados');
+
+        // Generar datos de prueba para temperatura
+        const testTempData = Array.from({ length: 10 }, (_, i) => ({
+            label: `${String(i * 2).padStart(2, '0')}:00`,
+            value: 36.5 + Math.sin(i * 0.5) * 0.8 + Math.random() * 0.3
+        }));
+
+        // Generar datos de prueba para actividad
+        const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        const testActivityData = days.map(day => ({
+            label: day,
+            value: Math.floor(Math.random() * 6000 + 2000)
+        }));
+
+        setTemperatureHistory(testTempData);
+        setActivityHistory(testActivityData);
+        setHasPendingUpdate(true);
+
+        console.log('📊 Datos de prueba aplicados:', { testTempData, testActivityData });
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -266,6 +290,15 @@ export default function Dashboard() {
                     >
                         <Icon name="sync" size={14} />
                         <span>Actualizar</span>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={testCharts}
+                        className="flex items-center space-x-1"
+                    >
+                        <Icon name="activity" size={14} />
+                        <span>Probar</span>
                     </Button>
                     <p className="text-sm text-gray-500">
                         Última actualización: {getLastUpdateText()}
