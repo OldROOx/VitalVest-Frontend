@@ -174,15 +174,7 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
                 </div>
 
                 {/* WebSocket Status en el sidebar */}
-                {!sidebarCollapsed && (
-                    <div className="p-4 border-b border-gray-200 transition-opacity duration-200">
-                        <WebSocketIndicator
-                            isConnected={isConnected}
-                            lastMessage={lastMessage}
-                            onReconnect={reconnect}
-                        />
-                    </div>
-                )}
+
 
                 {/* Navigation */}
                 <nav className="p-4 space-y-2">
