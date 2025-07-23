@@ -259,15 +259,9 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
                     Temperatura Corporal (Tiempo Real)
                 </h3>
                 <div className="flex items-center space-x-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                        isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                    }`}></div>
-                    <span className="text-sm text-gray-600">
-                        {isConnected ? 'Sensor Activo' : 'Sin Conexión'}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                        ({temperatureHistory.length} puntos)
-                    </span>
+
+
+
                 </div>
             </div>
 
@@ -289,10 +283,7 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
                     <p className="text-lg font-semibold text-gray-700">{stats.avg}°C</p>
                     <p className="text-xs text-gray-600">Promedio</p>
                 </div>
-                <div className={`text-center p-3 rounded-lg ${stats.statusColor}`}>
-                    <p className="text-lg font-semibold">{stats.status}</p>
-                    <p className="text-xs">Estado</p>
-                </div>
+
             </div>
 
             {/* Gráfico */}
