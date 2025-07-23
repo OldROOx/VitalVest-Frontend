@@ -194,60 +194,19 @@ export default function Dashboard() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-gray-900">Dashboard VitalVest</h1>
-                <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                        <div className={`w-3 h-3 rounded-full ${
-                            wsConnected ? 'bg-green-500' :
-                                isLoading ? 'bg-yellow-500' :
-                                    apiConnected ? 'bg-blue-500' : 'bg-red-500'
-                        } ${(wsConnected || isLoading) ? 'animate-pulse' : ''}`}></div>
-                        <span className="text-sm text-gray-600">
-                            {wsConnected ? 'WebSocket Conectado' :
-                                apiConnected ? 'API Conectada' :
-                                    isLoading ? 'Conectando...' : 'Desconectado'}
-                        </span>
-                    </div>
-                    <p className="text-sm text-gray-500">
-                        Última actualización: {getLastUpdateText()}
-                    </p>
-                </div>
             </div>
 
             {/* Estadísticas principales */}
-            <DashboardStats stats={stats} />
 
-            {/* Panel de control de WebSocket */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                        Control de WebSocket
-                    </h3>
-                    <div className="flex items-center space-x-4">
-                        <Button
-                            variant={wsConnected ? "danger" : "primary"}
-                            size="sm"
-                            onClick={wsConnected ? () => websocketService.disconnect() : reconnect}
-                        >
-                            {wsConnected ? 'Desconectar' : 'Reconectar'}
-                        </Button>
-                        <WebSocketTestButton />
-                    </div>
-                </div>
-            </div>
+
 
             {/* DATOS EN TIEMPO REAL DEL WEBSOCKET */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">
-                        {hasValidData() ? '🟢' : '🔴'} Datos en Tiempo Real (WebSocket)
+                        Datos
                     </h3>
                     <div className="flex items-center space-x-2">
-                        <Badge variant={hasValidData() ? 'success' : 'default'} size="sm">
-                            {hasValidData() ?
-                                `${getActiveSensorsCount()} sensores activos` :
-                                'Sin datos válidos'
-                            }
-                        </Badge>
                         {wsConnected && (
                             <Badge variant="success" size="sm">
                                 Conectado
@@ -265,9 +224,7 @@ export default function Dashboard() {
                             : 'bg-gray-50 border-gray-200'
                     }`}>
                         <div className="flex items-center justify-center mb-2">
-                            <Icon name="thermometer" size={20} className={`mr-2 ${
-                                isValidNumber(wsSensorData?.temperatura) ? 'text-blue-600' : 'text-gray-400'
-                            }`} />
+
                             <span className={`text-sm font-medium ${
                                 isValidNumber(wsSensorData?.temperatura) ? 'text-blue-800' : 'text-gray-600'
                             }`}>
@@ -343,32 +300,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Presión */}
-                    <div className={`rounded-lg p-4 text-center border-2 ${
-                        isValidNumber(wsSensorData?.presion)
-                            ? 'bg-purple-50 border-purple-200'
-                            : 'bg-gray-50 border-gray-200'
-                    }`}>
-                        <div className="flex items-center justify-center mb-2">
-                            <Icon name="activity" size={20} className={`mr-2 ${
-                                isValidNumber(wsSensorData?.presion) ? 'text-purple-600' : 'text-gray-400'
-                            }`} />
-                            <span className={`text-sm font-medium ${
-                                isValidNumber(wsSensorData?.presion) ? 'text-purple-800' : 'text-gray-600'
-                            }`}>
-                                Presión
-                            </span>
-                        </div>
-                        <p className={`text-2xl font-bold ${
-                            isValidNumber(wsSensorData?.presion) ? 'text-purple-600' : 'text-gray-400'
-                        }`}>
-                            {formatValue(wsSensorData?.presion, 0)}
-                        </p>
-                        <p className={`text-xs mt-1 ${
-                            isValidNumber(wsSensorData?.presion) ? 'text-purple-600' : 'text-gray-500'
-                        }`}>
-                            hPa
-                        </p>
-                    </div>
+
 
                     {/* Aceleración */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
@@ -383,7 +315,7 @@ export default function Dashboard() {
                             <span className={`text-sm font-medium ${
                                 isValidNumber(wsSensorData?.aceleracion?.x) ? 'text-orange-800' : 'text-gray-600'
                             }`}>
-                                Aceleración
+                                Pasos
                             </span>
                         </div>
                         <p className={`text-2xl font-bold ${
@@ -489,31 +421,7 @@ export default function Dashboard() {
             />
 
             {/* Estado de datos detallado */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Estado del Sistema
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-600">WebSocket</p>
-                        <p className={`text-lg font-semibold ${wsConnected ? 'text-green-600' : 'text-red-600'}`}>
-                            {wsConnected ? 'Conectado' : 'Desconectado'}
-                        </p>
-                    </div>
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-600">API Backend</p>
-                        <p className={`text-lg font-semibold ${apiConnected ? 'text-green-600' : 'text-red-600'}`}>
-                            {apiConnected ? 'Activa' : 'Inactiva'}
-                        </p>
-                    </div>
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-600">Sensores Activos</p>
-                        <p className="text-lg font-semibold text-blue-600">
-                            {getActiveSensorsCount()}/6
-                        </p>
-                    </div>
-                </div>
-            </div>
+
         </div>
     );
 }

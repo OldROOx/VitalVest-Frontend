@@ -170,35 +170,7 @@ export default function Sync() {
             </div>
 
             {/* Storage Information */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Información de Almacenamiento</h3>
-                <p className="text-sm text-gray-600 mb-4">Estado del almacenamiento local en Raspberry Pi</p>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600">Espacio Usado</p>
-                        <p className="text-lg font-semibold text-gray-900">{storageInfo.used}</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600">Espacio Disponible</p>
-                        <p className="text-lg font-semibold text-gray-900">{storageInfo.available}</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600">Capacidad Total</p>
-                        <p className="text-lg font-semibold text-gray-900">{storageInfo.total}</p>
-                    </div>
-                </div>
-
-                <div className="mt-4">
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Uso del almacenamiento</span>
-                        <span>7.5%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: '7.5%' }}></div>
-                    </div>
-                </div>
-            </div>
         </div>
     )
 }

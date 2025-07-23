@@ -255,7 +255,7 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
         <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                    <Icon name="thermometer" size={20} className="mr-2 text-red-500" />
+
                     Temperatura Corporal (Tiempo Real)
                 </h3>
                 <div className="flex items-center space-x-2">
@@ -313,38 +313,9 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
             </div>
 
             {/* Información adicional */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between text-xs text-gray-600">
-                    <span>
-                        Datos basados en sensor de temperatura • Actualización automática
-                    </span>
-                    <span>
-                        {temperatureHistory.length > 0 && stats.current !== '--' && (
-                            `Última lectura: ${stats.current}°C`
-                        )}
-                    </span>
-                </div>
-            </div>
 
             {/* Rangos de referencia */}
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-gray-600">Hipotermia: &lt;36°C</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-gray-600">Normal: 36-37.5°C</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="text-gray-600">Febrícula: 37.5-38°C</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-gray-600">Fiebre: &gt;38°C</span>
-                </div>
-            </div>
+
         </div>
     );
 };
