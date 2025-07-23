@@ -1,8 +1,8 @@
-// src/services/websocketService.js - CORREGIDO PARA TU BACKEND
+// src/services/websocketService.js - VERSIÓN CORREGIDA
 class WebSocketService {
     constructor() {
         this.ws = null;
-        this.url = 'ws://localhost:8080/ws';  // Tu API Go corre en 8080
+        this.url = 'ws://localhost:3000/ws';  // Usar puerto 3000 según tu backend
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectInterval = 3000;
@@ -28,40 +28,38 @@ class WebSocketService {
             this.ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('📦 Datos recibidos por WebSocket:', data);
+                    console.log('📦 Mensaje recibido por WebSocket:', data);
 
-                    // Tu backend envía datos con esta estructura según tu dominio:
-                    // {
-                    //   "temperatura": float64,
-                    //   "presion": float64,
-                    //   "humedad": float64,
-                    //   "aceleracion": {"x": float64, "y": float64, "z": float64},
-                    //   "giroscopio": {"x": float64, "y": float64, "z": float64}
-                    // }
-
-                    this.callbacks.onMessage.forEach(callback => callback(data));
+                    // Validar que los datos tengan la estructura esperada
+                    if (data && typeof data === 'object') {
+                        this.callbacks.onMessage.forEach(callback => callback(data));
+                    } else {
+                        console.warn('⚠️ Datos recibidos no tienen formato válido:', data);
+                    }
                 } catch (error) {
                     console.error('❌ Error al parsear datos del WebSocket:', error);
-                    console.log('Raw data:', event.data);
+                    console.log('Datos raw recibidos:', event.data);
                 }
             };
 
             this.ws.onclose = (event) => {
-                console.log('🔌 WebSocket desconectado:', event.code, event.reason);
+                console.log('🔌 WebSocket desconectado. Código:', event.code, 'Razón:', event.reason);
                 this.callbacks.onClose.forEach(callback => callback(event));
 
-                // Intentar reconexión automática
-                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                // Intentar reconexión automática solo si no fue cerrado intencionalmente
+                if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.reconnectAttempts++;
                     console.log(`🔄 Intentando reconectar... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
                     setTimeout(() => this.connect(), this.reconnectInterval);
-                } else {
+                } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
                     console.log('❌ Máximo de intentos de reconexión alcanzado');
                 }
             };
 
             this.ws.onerror = (error) => {
                 console.error('❌ Error en WebSocket:', error);
+                console.log('URL del WebSocket:', this.url);
+                console.log('Estado actual:', this.ws ? this.ws.readyState : 'No inicializado');
                 this.callbacks.onError.forEach(callback => callback(error));
             };
 
@@ -72,8 +70,8 @@ class WebSocketService {
 
     disconnect() {
         if (this.ws) {
-            console.log('🔌 Cerrando conexión WebSocket manualmente');
-            this.ws.close();
+            console.log('🔌 Desconectando WebSocket...');
+            this.ws.close(1000, 'Desconexión manual'); // Código 1000 = cierre normal
             this.ws = null;
         }
     }
@@ -98,10 +96,11 @@ class WebSocketService {
     // Método para enviar datos (opcional)
     send(data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify(data));
-            console.log('📤 Datos enviados por WebSocket:', data);
+            const jsonData = JSON.stringify(data);
+            console.log('📤 Enviando datos por WebSocket:', jsonData);
+            this.ws.send(jsonData);
         } else {
-            console.warn('⚠️ WebSocket no está conectado, no se pueden enviar datos');
+            console.warn('⚠️ WebSocket no está conectado. Estado:', this.ws ? this.ws.readyState : 'No inicializado');
         }
     }
 
@@ -110,17 +109,50 @@ class WebSocketService {
         return this.ws && this.ws.readyState === WebSocket.OPEN;
     }
 
-    // Obtener estado detallado
+    // Obtener estado detallado de la conexión
     getConnectionState() {
-        if (!this.ws) return 'DISCONNECTED';
+        if (!this.ws) return 'NO_INITIALIZED';
 
         switch (this.ws.readyState) {
-            case WebSocket.CONNECTING: return 'CONNECTING';
-            case WebSocket.OPEN: return 'OPEN';
-            case WebSocket.CLOSING: return 'CLOSING';
-            case WebSocket.CLOSED: return 'CLOSED';
-            default: return 'UNKNOWN';
+            case WebSocket.CONNECTING:
+                return 'CONNECTING';
+            case WebSocket.OPEN:
+                return 'OPEN';
+            case WebSocket.CLOSING:
+                return 'CLOSING';
+            case WebSocket.CLOSED:
+                return 'CLOSED';
+            default:
+                return 'UNKNOWN';
         }
+    }
+
+    // Método para cambiar la URL del WebSocket
+    setUrl(newUrl) {
+        if (this.isConnected()) {
+            console.warn('⚠️ Cerrando conexión actual antes de cambiar URL');
+            this.disconnect();
+        }
+        this.url = newUrl;
+        console.log('🔧 URL del WebSocket cambiada a:', this.url);
+    }
+
+    // Método para hacer ping al servidor (si el servidor lo soporta)
+    ping() {
+        if (this.isConnected()) {
+            this.send({ type: 'ping', timestamp: new Date().toISOString() });
+        }
+    }
+
+    // Método para obtener estadísticas de la conexión
+    getStats() {
+        return {
+            url: this.url,
+            state: this.getConnectionState(),
+            reconnectAttempts: this.reconnectAttempts,
+            maxReconnectAttempts: this.maxReconnectAttempts,
+            isConnected: this.isConnected()
+        };
     }
 }
 

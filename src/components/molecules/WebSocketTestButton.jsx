@@ -1,4 +1,4 @@
-// src/components/molecules/WebSocketTestButton.jsx
+// src/components/molecules/WebSocketTestButton.jsx - VERSIÓN CORREGIDA
 import { useState } from 'react';
 import { Button } from '../atoms/Button';
 import { Icon } from '../atoms/Icon';
@@ -10,27 +10,35 @@ export const WebSocketTestButton = ({ className = '' }) => {
         setIsLoading(true);
 
         try {
-            // Datos de prueba que coinciden con la nueva estructura del WebSocket
+            // Datos de prueba que coinciden con la estructura del backend Go
             const testData = {
-                temperatura: 22.5 + Math.random() * 15, // Temperatura ambiente/corporal
-                presion: 1013 + Math.random() * 50, // Presión atmosférica
-                humedad: 45 + Math.random() * 30, // Humedad relativa
-                aceleracion: {
-                    x: (Math.random() - 0.5) * 4, // Aceleración en X
-                    y: (Math.random() - 0.5) * 4, // Aceleración en Y
-                    z: (Math.random() - 0.5) * 4  // Aceleración en Z
+                bme280: {
+                    temperatura: 22.5 + Math.random() * 15,
+                    presion: 1013 + Math.random() * 50,
+                    humedad: 45 + Math.random() * 30
                 },
-                giroscopio: {
-                    x: (Math.random() - 0.5) * 200, // Velocidad angular en X
-                    y: (Math.random() - 0.5) * 200, // Velocidad angular en Y
-                    z: (Math.random() - 0.5) * 200  // Velocidad angular en Z
+                mpu6050: {
+                    aceleracion: {
+                        x: (Math.random() - 0.5) * 4,
+                        y: (Math.random() - 0.5) * 4,
+                        z: (Math.random() - 0.5) * 4
+                    },
+                    giroscopio: {
+                        x: (Math.random() - 0.5) * 200,
+                        y: (Math.random() - 0.5) * 200,
+                        z: (Math.random() - 0.5) * 200
+                    }
+                },
+                mlx90614: {
+                    temperatura_ambiente: 20 + Math.random() * 10,
+                    temp_objeto: 36 + Math.random() * 2
                 }
             };
 
             console.log('📤 Enviando datos de prueba:', testData);
 
             // Enviar datos al endpoint del WebSocket
-            const response = await fetch('http://localhost:8080/sendData', {
+            const response = await fetch('http://localhost:3000/sendData', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -63,68 +71,88 @@ export const WebSocketTestButton = ({ className = '' }) => {
             switch (sensorType) {
                 case 'temperature':
                     testData = {
-                        temperatura: 36.5 + Math.random() * 2, // Temperatura corporal normal
-                        presion: 1013 + Math.random() * 10,
-                        humedad: 60 + Math.random() * 20
+                        bme280: {
+                            temperatura: 25 + Math.random() * 10,
+                            presion: 1013 + Math.random() * 10,
+                            humedad: 60 + Math.random() * 20
+                        },
+                        mlx90614: {
+                            temperatura_ambiente: 22 + Math.random() * 5,
+                            temp_objeto: 36.5 + Math.random() * 2
+                        }
                     };
                     break;
 
                 case 'motion':
                     testData = {
-                        temperatura: 25,
-                        presion: 1013,
-                        humedad: 50,
-                        aceleracion: {
-                            x: Math.random() * 2 - 1,
-                            y: Math.random() * 2 - 1,
-                            z: Math.random() * 2 - 1
-                        },
-                        giroscopio: {
-                            x: Math.random() * 100 - 50,
-                            y: Math.random() * 100 - 50,
-                            z: Math.random() * 100 - 50
+                        mpu6050: {
+                            aceleracion: {
+                                x: Math.random() * 2 - 1,
+                                y: Math.random() * 2 - 1,
+                                z: Math.random() * 2 - 1
+                            },
+                            giroscopio: {
+                                x: Math.random() * 100 - 50,
+                                y: Math.random() * 100 - 50,
+                                z: Math.random() * 100 - 50
+                            }
                         }
                     };
                     break;
 
                 case 'extreme':
                     testData = {
-                        temperatura: 39.5, // Fiebre
-                        presion: 950,      // Presión baja
-                        humedad: 90,       // Humedad alta
-                        aceleracion: {
-                            x: 3.5,  // Movimiento intenso
-                            y: -2.8,
-                            z: 4.1
+                        bme280: {
+                            temperatura: 40,
+                            presion: 950,
+                            humedad: 90
                         },
-                        giroscopio: {
-                            x: 150,  // Rotación rápida
-                            y: -120,
-                            z: 180
+                        mpu6050: {
+                            aceleracion: {
+                                x: 3.5,
+                                y: -2.8,
+                                z: 4.1
+                            },
+                            giroscopio: {
+                                x: 150,
+                                y: -120,
+                                z: 180
+                            }
+                        },
+                        mlx90614: {
+                            temperatura_ambiente: 35,
+                            temp_objeto: 39.5
                         }
                     };
                     break;
 
                 default:
-                    // Datos normales por defecto
                     testData = {
-                        temperatura: 25 + Math.random() * 10,
-                        presion: 1013 + Math.random() * 20,
-                        humedad: 50 + Math.random() * 20,
-                        aceleracion: {
-                            x: Math.random() - 0.5,
-                            y: Math.random() - 0.5,
-                            z: Math.random() - 0.5
+                        bme280: {
+                            temperatura: 25 + Math.random() * 10,
+                            presion: 1013 + Math.random() * 20,
+                            humedad: 50 + Math.random() * 20
                         },
-                        giroscopio: {
-                            x: Math.random() * 50 - 25,
-                            y: Math.random() * 50 - 25,
-                            z: Math.random() * 50 - 25
+                        mpu6050: {
+                            aceleracion: {
+                                x: Math.random() - 0.5,
+                                y: Math.random() - 0.5,
+                                z: Math.random() - 0.5
+                            },
+                            giroscopio: {
+                                x: Math.random() * 50 - 25,
+                                y: Math.random() * 50 - 25,
+                                z: Math.random() * 50 - 25
+                            }
+                        },
+                        mlx90614: {
+                            temperatura_ambiente: 22 + Math.random() * 5,
+                            temp_objeto: 36 + Math.random() * 1
                         }
                     };
             }
 
-            const response = await fetch('http://localhost:8080/sendData', {
+            const response = await fetch('http://localhost:3000/sendData', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -192,6 +220,8 @@ export const WebSocketTestButton = ({ className = '' }) => {
 
             <p className="text-xs text-gray-500 mt-2">
                 Envía datos de prueba al WebSocket para ver las gráficas en tiempo real
+                <br />
+                <span className="font-mono">Endpoint: http://localhost:3000/sendData</span>
             </p>
         </div>
     );
