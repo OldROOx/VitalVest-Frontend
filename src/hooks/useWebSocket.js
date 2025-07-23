@@ -6,30 +6,35 @@ export const useWebSocket = () => {
     const [isConnected, setIsConnected] = useState(false);
     const [lastMessage, setLastMessage] = useState(null);
     const [connectionError, setConnectionError] = useState(null);
+
     const [sensorData, setSensorData] = useState({
-        temperatura: null,
+        temperatura: null,           // BME280
         presion: null,
         humedad: null,
-        aceleracion: {
-            x: null,
-            y: null,
-            z: null
-        },
-        giroscopio: {
-            x: null,
-            y: null,
-            z: null
-        }
+        temperatura_objeto: null,    // MLX90614
+        temperatura_ambiente: null,
+        aceleracion: { x: null, y: null, z: null }, // MPU6050
+        giroscopio: { x: null, y: null, z: null }
     });
 
     const retryTimeoutRef = useRef(null);
 
     useEffect(() => {
-        // Configurar callbacks del WebSocket
         websocketService.onOpen(() => {
             setIsConnected(true);
             setConnectionError(null);
             console.log('🟢 WebSocket conectado desde React');
+
+            // ✅ Reiniciar datos para evitar mostrar valores antiguos
+            setSensorData({
+                temperatura: null,
+                presion: null,
+                humedad: null,
+                temperatura_objeto: null,
+                temperatura_ambiente: null,
+                aceleracion: { x: null, y: null, z: null },
+                giroscopio: { x: null, y: null, z: null }
+            });
         });
 
         websocketService.onMessage((data) => {
@@ -40,30 +45,28 @@ export const useWebSocket = () => {
 
             console.log('📨 Nuevos datos de sensores:', data);
 
-            // Actualizar datos de sensores con la nueva estructura
-            setSensorData(prevData => ({
-                // Mantener datos anteriores y actualizar con nuevos
-                ...prevData,
+            // ✅ Mapeo desde la estructura real del WebSocket
+            const bme = data.bme280 || {};
+            const mlx = data.mlx90614 || {};
+            const mpu = data.mpu6050 || {};
 
-                // Mapear los nuevos campos directos
-                temperatura: data.temperatura !== undefined ? data.temperatura : prevData.temperatura,
-                presion: data.presion !== undefined ? data.presion : prevData.presion,
-                humedad: data.humedad !== undefined ? data.humedad : prevData.humedad,
-
-                // Mapear aceleración si existe
+            setSensorData({
+                temperatura: bme.temperatura ?? null,
+                presion: bme.presion ?? null,
+                humedad: bme.humedad ?? null,
+                temperatura_objeto: mlx.temp_objeto ?? null,
+                temperatura_ambiente: mlx.temperatura_ambiente ?? null,
                 aceleracion: {
-                    x: data.aceleracion?.x !== undefined ? data.aceleracion.x : prevData.aceleracion.x,
-                    y: data.aceleracion?.y !== undefined ? data.aceleracion.y : prevData.aceleracion.y,
-                    z: data.aceleracion?.z !== undefined ? data.aceleracion.z : prevData.aceleracion.z
+                    x: mpu.aceleracion?.x ?? null,
+                    y: mpu.aceleracion?.y ?? null,
+                    z: mpu.aceleracion?.z ?? null
                 },
-
-                // Mapear giroscopio si existe
                 giroscopio: {
-                    x: data.giroscopio?.x !== undefined ? data.giroscopio.x : prevData.giroscopio.x,
-                    y: data.giroscopio?.y !== undefined ? data.giroscopio.y : prevData.giroscopio.y,
-                    z: data.giroscopio?.z !== undefined ? data.giroscopio.z : prevData.giroscopio.z
+                    x: mpu.giroscopio?.x ?? null,
+                    y: mpu.giroscopio?.y ?? null,
+                    z: mpu.giroscopio?.z ?? null
                 }
-            }));
+            });
         });
 
         websocketService.onClose(() => {
@@ -77,10 +80,8 @@ export const useWebSocket = () => {
             console.error('❌ Error WebSocket desde React:', error);
         });
 
-        // Iniciar conexión
         websocketService.connect();
 
-        // Cleanup al desmontar el componente
         return () => {
             if (retryTimeoutRef.current) {
                 clearTimeout(retryTimeoutRef.current);
@@ -89,7 +90,6 @@ export const useWebSocket = () => {
         };
     }, []);
 
-    // Función para reconectar manualmente
     const reconnect = () => {
         websocketService.disconnect();
         setTimeout(() => {
@@ -97,36 +97,15 @@ export const useWebSocket = () => {
         }, 1000);
     };
 
-    // Función para obtener datos simulados cuando no hay conexión (opcional)
-    const getSimulatedData = () => {
-        return {
-            temperatura: 25.5 + Math.random() * 10,
-            presion: 1013 + Math.random() * 50,
-            humedad: 45 + Math.random() * 30,
-            aceleracion: {
-                x: (Math.random() - 0.5) * 2,
-                y: (Math.random() - 0.5) * 2,
-                z: (Math.random() - 0.5) * 2
-            },
-            giroscopio: {
-                x: (Math.random() - 0.5) * 100,
-                y: (Math.random() - 0.5) * 100,
-                z: (Math.random() - 0.5) * 100
-            }
-        };
-    };
-
     return {
         isConnected,
         lastMessage,
         connectionError,
-        sensorData: isConnected ? sensorData : getSimulatedData(),
+        sensorData,
         reconnect,
-        // Funciones auxiliares para verificar si hay datos
         hasTemperature: () => sensorData.temperatura !== null,
         hasAcceleration: () => sensorData.aceleracion.x !== null,
         hasGyroscope: () => sensorData.giroscopio.x !== null,
-        // Función para obtener resumen de los datos
         getSensorSummary: () => ({
             connected: isConnected,
             dataPoints: {
@@ -134,7 +113,8 @@ export const useWebSocket = () => {
                 presion: sensorData.presion !== null,
                 humedad: sensorData.humedad !== null,
                 aceleracion: sensorData.aceleracion.x !== null,
-                giroscopio: sensorData.giroscopio.x !== null
+                giroscopio: sensorData.giroscopio.x !== null,
+                temperatura_objeto: sensorData.temperatura_objeto !== null
             },
             lastUpdate: lastMessage?.timestamp
         })
