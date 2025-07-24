@@ -52,7 +52,7 @@ export default function Dashboard() {
     // Actualizar gráfica de temperatura con datos del WebSocket
     useEffect(() => {
         // Usar temperatura corporal (MLX90614) si está disponible, sino temperatura ambiente (BME280)
-        const currentTemp = wsSensorData.temp_objeto || wsSensorData.temperatura;
+        const currentTemp = wsSensorData.temperatura_objeto || wsSensorData.temperatura;
 
         if (wsConnected && currentTemp !== null && currentTemp !== undefined) {
             console.log('📈 Actualizando gráfica de temperatura con:', currentTemp);

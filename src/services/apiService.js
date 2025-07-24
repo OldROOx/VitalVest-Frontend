@@ -1,5 +1,5 @@
-// src/services/apiService.js - CORREGIDO PARA TU API GO
-const API_BASE_URL = 'http://localhost:8080';
+// src/services/apiService.js - CONFIGURADO PARA TU BACKEND
+const API_BASE_URL = 'https://vivaltest-back.namixcode.cc';
 
 class ApiService {
     constructor() {
@@ -27,7 +27,7 @@ class ApiService {
     }
 
     // Iniciar polling automático
-    startPolling(intervalMs = 2000) {
+    startPolling(intervalMs = 3000) {
         if (this.isPolling) return;
 
         this.isPolling = true;
@@ -52,29 +52,25 @@ class ApiService {
         console.log('⏹️ Polling de API detenido');
     }
 
-    // Obtener todos los datos y notificar a los componentes
+    // Obtener todos los datos - ADAPTADO A TU ESTRUCTURA
     async fetchAllData() {
         try {
             const sensorData = await this.getAllSensorData();
             const users = await this.getUsers();
 
             if (sensorData) {
-                // Transformar datos al formato esperado por el frontend
                 const transformedData = this.transformSensorData(sensorData);
 
-                // Actualizar cache local
                 this.lastData = {
                     sensors: transformedData,
                     users: users,
                     timestamp: new Date().toISOString()
                 };
 
-                // Notificar a todos los componentes suscritos
                 this.callbacks.onData.forEach(callback => {
                     callback(this.lastData);
                 });
 
-                // Notificar estado de conexión
                 this.callbacks.onConnection.forEach(callback => {
                     callback(true);
                 });
@@ -108,13 +104,22 @@ class ApiService {
         }
     }
 
-    // Obtener datos del sensor BME280 - ADAPTADO A TU API
+    // BME280 - Con autenticación
     async getBMEData() {
         try {
-            const response = await fetch(`${API_BASE_URL}/bme`);
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            // Solo agregar Authorization si tenemos token
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/bme`, { headers });
             if (!response.ok) throw new Error(`BME HTTP ${response.status}`);
             const result = await response.json();
-            // Tu API devuelve: { "BME": [...] }
             return result.BME || [];
         } catch (error) {
             console.error('Error obteniendo datos BME:', error);
@@ -122,13 +127,21 @@ class ApiService {
         }
     }
 
-    // Obtener datos del sensor GSR - ADAPTADO A TU API
+    // GSR - Con autenticación
     async getGSRData() {
         try {
-            const response = await fetch(`${API_BASE_URL}/gsr`);
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/gsr`, { headers });
             if (!response.ok) throw new Error(`GSR HTTP ${response.status}`);
             const result = await response.json();
-            // Tu API devuelve: { "GSR": [...] }
             return result.GSR || [];
         } catch (error) {
             console.error('Error obteniendo datos GSR:', error);
@@ -136,13 +149,21 @@ class ApiService {
         }
     }
 
-    // Obtener datos del sensor MLX90614 - ADAPTADO A TU API
+    // MLX90614 - Con autenticación
     async getMLXData() {
         try {
-            const response = await fetch(`${API_BASE_URL}/mlx`);
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/mlx`, { headers });
             if (!response.ok) throw new Error(`MLX HTTP ${response.status}`);
             const result = await response.json();
-            // Tu API devuelve: { "MLX": [...] }
             return result.MLX || [];
         } catch (error) {
             console.error('Error obteniendo datos MLX:', error);
@@ -150,13 +171,21 @@ class ApiService {
         }
     }
 
-    // Obtener datos del sensor MPU6050 - ADAPTADO A TU API
+    // MPU6050 - Con autenticación
     async getMPUData() {
         try {
-            const response = await fetch(`${API_BASE_URL}/mpu`);
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/mpu`, { headers });
             if (!response.ok) throw new Error(`MPU HTTP ${response.status}`);
             const result = await response.json();
-            // Tu API devuelve: { "MPU": [...] }
             return result.MPU || [];
         } catch (error) {
             console.error('Error obteniendo datos MPU:', error);
@@ -164,13 +193,21 @@ class ApiService {
         }
     }
 
-    // Obtener usuarios - ADAPTADO A TU API
+    // Usuarios - Con autenticación
     async getUsers() {
         try {
-            const response = await fetch(`${API_BASE_URL}/users`);
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/users`, { headers });
             if (!response.ok) throw new Error(`Users HTTP ${response.status}`);
             const users = await response.json();
-            // Tu API devuelve directamente el array de usuarios
             return users || [];
         } catch (error) {
             console.error('Error obteniendo usuarios:', error);
@@ -178,65 +215,57 @@ class ApiService {
         }
     }
 
-    // Transformar datos de sensores al formato esperado por el frontend
+    // Transformar datos según tu estructura
     transformSensorData(sensorData) {
         const { BME, GSR, MLX, MPU } = sensorData;
 
-        // Obtener los datos más recientes de cada sensor
         const latestBME = BME && BME.length > 0 ? BME[BME.length - 1] : null;
         const latestGSR = GSR && GSR.length > 0 ? GSR[GSR.length - 1] : null;
         const latestMLX = MLX && MLX.length > 0 ? MLX[MLX.length - 1] : null;
         const latestMPU = MPU && MPU.length > 0 ? MPU[MPU.length - 1] : null;
 
         return {
-            // Datos actuales (más recientes) - ADAPTADO A TU ESTRUCTURA
             current: {
-                // BME280 - Estructura: temperatura, presion, humedad
+                // BME280 - temperatura, humedad, presion
                 temperatura_ambiente: latestBME?.temperatura || null,
                 humedad_relativa: latestBME?.humedad || null,
                 presion: latestBME?.presion || null,
 
-                // GSR - Estructura: conductancia, estado_hidratacion
+                // GSR - conductancia, estado_hidratacion
                 conductancia: latestGSR?.conductancia || null,
                 estado_hidratacion: latestGSR?.estado_hidratacion || null,
 
-                // MLX90614 - Estructura: temperatura_ambiente, temperatura_objeto
+                // MLX90614 - temperatura_objeto
                 temperatura_corporal: latestMLX?.temperatura_objeto || null,
 
-                // MPU6050 - Estructura: pasos, fecha
+                // MPU6050 - pasos, fecha
                 pasos: latestMPU?.pasos || null,
                 fecha_actividad: latestMPU?.fecha || null
             },
-            // Datos históricos para gráficas
             history: {
                 BME: BME || [],
                 GSR: GSR || [],
                 MLX: MLX || [],
                 MPU: MPU || []
             },
-            // Estadísticas
             stats: this.calculateStats(sensorData)
         };
     }
 
-    // Calcular estadísticas de los datos - ADAPTADO A TU ESTRUCTURA
+    // Calcular estadísticas
     calculateStats(sensorData) {
         const { BME, GSR, MLX, MPU } = sensorData;
 
-        // Estadísticas de temperatura corporal (MLX)
         const mlxTemps = MLX?.map(d => d.temperatura_objeto).filter(t => t != null) || [];
         const avgBodyTemp = mlxTemps.length > 0 ?
             mlxTemps.reduce((a, b) => a + b, 0) / mlxTemps.length : null;
 
-        // Estadísticas de pasos (MPU)
         const totalSteps = MPU?.reduce((total, d) => total + (d.pasos || 0), 0) || 0;
 
-        // Estadísticas de temperatura ambiente (BME)
         const bmeTemps = BME?.map(d => d.temperatura).filter(t => t != null) || [];
         const avgAmbientTemp = bmeTemps.length > 0 ?
             bmeTemps.reduce((a, b) => a + b, 0) / bmeTemps.length : null;
 
-        // Estadísticas de hidratación (GSR - convertir conductancia a porcentaje)
         const gsrValues = GSR?.map(d => d.conductancia).filter(c => c != null) || [];
         const avgHydration = gsrValues.length > 0 ?
             (gsrValues.reduce((a, b) => a + b, 0) / gsrValues.length) * 100 : null;
@@ -266,12 +295,16 @@ class ApiService {
         };
     }
 
-    // Métodos para crear nuevos registros - USANDO TU API
+    // Crear nuevos registros - CON AUTENTICACIÓN
     async createBME(data) {
         try {
+            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/bme`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     temperatura: data.temperatura,
                     humedad: data.humedad,
@@ -288,9 +321,13 @@ class ApiService {
 
     async createGSR(data) {
         try {
+            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/gsr`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     conductancia: data.conductancia,
                     estado_hidratacion: data.estado_hidratacion
@@ -306,9 +343,13 @@ class ApiService {
 
     async createMLX(data) {
         try {
+            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/mlx`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     temperatura_ambiente: data.temperatura_ambiente,
                     temperatura_objeto: data.temperatura_objeto
@@ -324,9 +365,13 @@ class ApiService {
 
     async createMPU(data) {
         try {
+            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/mpu`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     pasos: data.pasos
                 })
@@ -353,16 +398,13 @@ class ApiService {
         }
     }
 
-    // Obtener datos más recientes
     getLastData() {
         return this.lastData;
     }
 
-    // Verificar si está haciendo polling
     isPollingActive() {
         return this.isPolling;
     }
 }
 
-// Exportar instancia singleton
 export const apiService = new ApiService();

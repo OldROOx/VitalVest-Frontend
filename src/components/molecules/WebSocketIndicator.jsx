@@ -30,37 +30,10 @@ export const WebSocketIndicator = ({
 
     return (
         <div className={`flex items-center space-x-3 ${className}`}>
-            {/* Indicador de estado */}
-            <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${getStatusColor()} ${isConnected ? 'animate-pulse' : ''}`}></div>
-                <span className="text-sm font-medium text-gray-700">
-                    {getStatusText()}
-                </span>
-            </div>
 
-            {/* Información adicional */}
-            <div className="flex items-center space-x-2 text-xs text-gray-500">
-                <Icon name="activity" size={12} />
-                <span>Última actualización: {getLastUpdateText()}</span>
-            </div>
 
-            {/* Botón de reconexión */}
-            {!isConnected && onReconnect && (
-                <button
-                    onClick={onReconnect}
-                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                >
-                    Reconectar
-                </button>
-            )}
 
-            {/* Badge de estado */}
-            <Badge
-                variant={isConnected ? 'success' : 'danger'}
-                size="sm"
-            >
-                {isConnected ? 'Online' : 'Offline'}
-            </Badge>
+
         </div>
     );
 };

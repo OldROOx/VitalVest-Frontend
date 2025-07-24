@@ -1,22 +1,33 @@
-// src/services/websocketService.js - CORREGIDO PARA TU BACKEND
+// src/services/websocketService.js - WEBSOCKET DESHABILITADO TEMPORALMENTE
 class WebSocketService {
     constructor() {
         this.ws = null;
-        this.url = 'ws://localhost:3000/ws';  // Tu servidor WebSocket en puerto 3000
+        this.url = 'http://100.28.244.240'; // Tu servidor WebSocket (si está disponible)
         this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
-        this.reconnectInterval = 3000;
+        this.maxReconnectAttempts = 3; // Reducido para evitar spam
+        this.reconnectInterval = 5000; // Aumentado a 5 segundos
         this.callbacks = {
             onOpen: [],
             onMessage: [],
             onClose: [],
             onError: []
         };
+        this.isEnabled = false; // WEBSOCKET DESHABILITADO POR DEFECTO
     }
 
     connect() {
+        // WebSocket deshabilitado temporalmente para usar solo API REST
+        if (!this.isEnabled) {
+            console.log('📡 WebSocket deshabilitado - usando solo API REST');
+            // Simular conexión fallida para que el hook funcione correctamente
+            setTimeout(() => {
+                this.callbacks.onClose.forEach(callback => callback({ code: 1000, reason: 'WebSocket deshabilitado' }));
+            }, 100);
+            return;
+        }
+
         try {
-            console.log('🔌 Conectando al WebSocket:', this.url);
+            console.log('🔌 Intentando conectar al WebSocket:', this.url);
             this.ws = new WebSocket(this.url);
 
             this.ws.onopen = (event) => {
@@ -30,7 +41,6 @@ class WebSocketService {
                     const data = JSON.parse(event.data);
                     console.log('📦 Mensaje recibido por WebSocket:', data);
 
-                    // Validar que los datos tengan la estructura esperada de tu backend
                     if (data && typeof data === 'object') {
                         this.callbacks.onMessage.forEach(callback => callback(data));
                     } else {
@@ -46,25 +56,24 @@ class WebSocketService {
                 console.log('🔌 WebSocket desconectado. Código:', event.code, 'Razón:', event.reason);
                 this.callbacks.onClose.forEach(callback => callback(event));
 
-                // Intentar reconexión automática solo si no fue cerrado intencionalmente
-                if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+                // Intentar reconexión automática solo si está habilitado
+                if (this.isEnabled && event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.reconnectAttempts++;
-                    console.log(`🔄 Intentando reconectar... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+                    console.log(`🔄 Intentando reconectar WebSocket... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
                     setTimeout(() => this.connect(), this.reconnectInterval);
                 } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-                    console.log('❌ Máximo de intentos de reconexión alcanzado');
+                    console.log('❌ Máximo de intentos de reconexión WebSocket alcanzado');
                 }
             };
 
             this.ws.onerror = (error) => {
                 console.error('❌ Error en WebSocket:', error);
-                console.log('URL del WebSocket:', this.url);
-                console.log('Estado actual:', this.ws ? this.ws.readyState : 'No inicializado');
                 this.callbacks.onError.forEach(callback => callback(error));
             };
 
         } catch (error) {
             console.error('❌ Error al crear conexión WebSocket:', error);
+            this.callbacks.onError.forEach(callback => callback(error));
         }
     }
 
@@ -74,6 +83,20 @@ class WebSocketService {
             this.ws.close(1000, 'Desconexión manual');
             this.ws = null;
         }
+    }
+
+    // Habilitar WebSocket
+    enable() {
+        console.log('🔌 Habilitando WebSocket...');
+        this.isEnabled = true;
+        this.connect();
+    }
+
+    // Deshabilitar WebSocket
+    disable() {
+        console.log('🔌 Deshabilitando WebSocket...');
+        this.isEnabled = false;
+        this.disconnect();
     }
 
     // Métodos para registrar callbacks
@@ -93,24 +116,25 @@ class WebSocketService {
         this.callbacks.onError.push(callback);
     }
 
-    // Método para enviar datos (opcional)
+    // Método para enviar datos
     send(data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             const jsonData = JSON.stringify(data);
             console.log('📤 Enviando datos por WebSocket:', jsonData);
             this.ws.send(jsonData);
         } else {
-            console.warn('⚠️ WebSocket no está conectado. Estado:', this.ws ? this.ws.readyState : 'No inicializado');
+            console.warn('⚠️ WebSocket no está conectado o está deshabilitado');
         }
     }
 
     // Verificar estado de conexión
     isConnected() {
-        return this.ws && this.ws.readyState === WebSocket.OPEN;
+        return this.isEnabled && this.ws && this.ws.readyState === WebSocket.OPEN;
     }
 
-    // Obtener estado detallado de la conexión
+    // Obtener estado detallado
     getConnectionState() {
+        if (!this.isEnabled) return 'DISABLED';
         if (!this.ws) return 'NO_INITIALIZED';
 
         switch (this.ws.readyState) {
@@ -127,31 +151,15 @@ class WebSocketService {
         }
     }
 
-    // Método para cambiar la URL del WebSocket
-    setUrl(newUrl) {
-        if (this.isConnected()) {
-            console.warn('⚠️ Cerrando conexión actual antes de cambiar URL');
-            this.disconnect();
-        }
-        this.url = newUrl;
-        console.log('🔧 URL del WebSocket cambiada a:', this.url);
-    }
-
-    // Método para hacer ping al servidor (si el servidor lo soporta)
-    ping() {
-        if (this.isConnected()) {
-            this.send({ type: 'ping', timestamp: new Date().toISOString() });
-        }
-    }
-
-    // Método para obtener estadísticas de la conexión
+    // Obtener estadísticas
     getStats() {
         return {
             url: this.url,
             state: this.getConnectionState(),
             reconnectAttempts: this.reconnectAttempts,
             maxReconnectAttempts: this.maxReconnectAttempts,
-            isConnected: this.isConnected()
+            isConnected: this.isConnected(),
+            isEnabled: this.isEnabled
         };
     }
 }
