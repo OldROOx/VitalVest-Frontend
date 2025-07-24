@@ -10,6 +10,7 @@ export const Chart = ({
     const chartInstance = useRef(null)
     const [chartReady, setChartReady] = useState(false)
     const [error, setError] = useState(null)
+    const isInitialized = useRef(false)
 
     // Función para limpiar el gráfico anterior
     const cleanupChart = () => {
@@ -23,25 +24,18 @@ export const Chart = ({
         }
     }
 
+    // Inicializar el gráfico una sola vez
     useEffect(() => {
         let mounted = true
 
-        const loadChart = async () => {
-            // Verificar que tenemos datos válidos
-            if (!data || !Array.isArray(data) || data.length === 0) {
-                if (mounted) {
-                    setError('Sin datos para mostrar')
-                    setChartReady(false)
-                }
+        const initializeChart = async () => {
+            // Solo inicializar si no está ya inicializado y tenemos datos
+            if (isInitialized.current || !data || !Array.isArray(data) || data.length === 0) {
                 return
             }
 
             // Verificar que el canvas existe
             if (!chartRef.current) {
-                if (mounted) {
-                    setError('Canvas no disponible')
-                    setChartReady(false)
-                }
                 return
             }
 
@@ -52,10 +46,7 @@ export const Chart = ({
                     setChartReady(false)
                 }
 
-                // Limpiar gráfico previo
-                cleanupChart()
-
-                // Importar Chart.js con timeout
+                // Importar Chart.js
                 const chartModule = await Promise.race([
                     import('chart.js'),
                     new Promise((_, reject) =>
@@ -94,7 +85,7 @@ export const Chart = ({
                         mode: 'index'
                     },
                     animation: {
-                        duration: 400,
+                        duration: 300, // Animación más rápida para inicialización
                         easing: 'easeInOutQuart'
                     }
                 }
@@ -258,6 +249,8 @@ export const Chart = ({
                 if (mounted) {
                     chartInstance.current = new Chart(ctx, chartConfig)
                     setChartReady(true)
+                    isInitialized.current = true
+                    console.log(`✅ Gráfica ${type} inicializada correctamente`)
                 }
 
             } catch (error) {
@@ -269,18 +262,44 @@ export const Chart = ({
             }
         }
 
-        // Pequeño delay para asegurar que el DOM esté listo
-        const timeoutId = setTimeout(() => {
-            loadChart()
-        }, 100)
+        // Inicializar cuando tengamos datos
+        if (data && Array.isArray(data) && data.length > 0) {
+            initializeChart()
+        }
 
         // Cleanup
         return () => {
             mounted = false
-            clearTimeout(timeoutId)
-            cleanupChart()
         }
-    }, [data, type, title])
+    }, [data?.length > 0, type]) // Solo se ejecuta cuando tengamos datos o cambie el tipo
+
+    // Actualizar datos del gráfico existente (sin reiniciar)
+    useEffect(() => {
+        if (chartInstance.current && data && Array.isArray(data) && data.length > 0 && isInitialized.current) {
+            const chart = chartInstance.current
+
+            try {
+                // Actualizar labels y datos
+                chart.data.labels = data.map(item => item.label || 'Sin etiqueta')
+                chart.data.datasets[0].data = data.map(item => Number(item.value) || 0)
+
+                // Actualizar sin animación para cambios incrementales
+                chart.update('none')
+
+                console.log(`🔄 Gráfica ${type} actualizada con nuevos datos (sin reiniciar)`)
+            } catch (error) {
+                console.error('Error actualizando gráfica:', error)
+            }
+        }
+    }, [data, type])
+
+    // Cleanup al desmontar
+    useEffect(() => {
+        return () => {
+            cleanupChart()
+            isInitialized.current = false
+        }
+    }, [])
 
     // Calcular estadísticas
     const getStats = () => {
@@ -329,7 +348,8 @@ export const Chart = ({
                 {/* Canvas para la gráfica */}
                 <canvas
                     ref={chartRef}
-                    className={`w-full h-full ${chartReady ? 'block' : 'hidden'}`}
+                    className="w-full h-full"
+                    style={{ display: chartReady ? 'block' : 'none' }}
                 ></canvas>
 
                 {/* Estados de carga/error */}
@@ -343,10 +363,15 @@ export const Chart = ({
                                     {data?.length || 0} puntos de datos disponibles
                                 </p>
                             </div>
+                        ) : !data || data.length === 0 ? (
+                            <div className="text-center text-gray-500">
+                                <div className="mb-2">📊</div>
+                                <p className="text-sm">Esperando datos...</p>
+                            </div>
                         ) : (
                             <div className="text-center text-gray-500">
                                 <div className="mb-2 animate-spin">⏳</div>
-                                <p className="text-sm">Cargando gráfica...</p>
+                                <p className="text-sm">Inicializando gráfica...</p>
                             </div>
                         )}
                     </div>
@@ -398,13 +423,8 @@ export const Chart = ({
                 </div>
             )}
 
-            {/* Mensaje cuando no hay datos */}
-            {(!data || !Array.isArray(data) || data.length === 0) && (
-                <div className="mt-4 text-center text-gray-500 text-sm">
-                    <p>Sin datos disponibles para mostrar</p>
-                    <p className="text-xs mt-1">Los datos aparecerán cuando estén disponibles</p>
-                </div>
-            )}
+            {/* Estado de actualización */}
+
         </div>
     )
 }

@@ -5,6 +5,7 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
     const chartRef = useRef(null);
     const chartInstance = useRef(null);
     const [temperatureHistory, setTemperatureHistory] = useState([]);
+    const isInitialized = useRef(false);
 
     // Función para verificar si un valor es válido
     const isValidTemperature = (temp) => {
@@ -40,7 +41,7 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
 
     // Inicializar con algunos datos por defecto si no hay historial
     useEffect(() => {
-        if (temperatureHistory.length === 0 && !isConnected) {
+        if (temperatureHistory.length === 0 && !isConnected && !isInitialized.current) {
             // Crear datos iniciales simulados
             const initialData = Array.from({ length: 10 }, (_, i) => {
                 const now = new Date();
@@ -57,29 +58,20 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
             });
 
             setTemperatureHistory(initialData);
+            isInitialized.current = true;
         }
     }, [isConnected, temperatureHistory.length]);
 
-    // Crear/actualizar gráfico
+    // Crear gráfico inicial (solo una vez)
     useEffect(() => {
-        const loadChart = async () => {
-            if (!chartRef.current || temperatureHistory.length === 0) {
-                console.log('📊 No se puede crear gráfica:', {
-                    hasCanvas: !!chartRef.current,
-                    hasData: temperatureHistory.length > 0
-                });
+        const initializeChart = async () => {
+            if (!chartRef.current || chartInstance.current || temperatureHistory.length === 0) {
                 return;
             }
 
             try {
                 const { Chart, registerables } = await import('chart.js');
                 Chart.register(...registerables);
-
-                // Destruir gráfico previo
-                if (chartInstance.current) {
-                    chartInstance.current.destroy();
-                    chartInstance.current = null;
-                }
 
                 const ctx = chartRef.current.getContext('2d');
 
@@ -88,7 +80,7 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
                 gradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
                 gradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
 
-                console.log('📊 Creando gráfica de temperatura con', temperatureHistory.length, 'puntos');
+                console.log('📊 Inicializando gráfica de temperatura por primera vez');
 
                 chartInstance.current = new Chart(ctx, {
                     type: 'line',
@@ -183,20 +175,20 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
                             }
                         },
                         animation: {
-                            duration: 750,
+                            duration: 300, // Animación más rápida para inicialización
                             easing: 'easeInOutQuart'
                         }
                     }
                 });
 
-                console.log('✅ Gráfica de temperatura creada exitosamente');
+                console.log('✅ Gráfica de temperatura inicializada correctamente');
 
             } catch (error) {
-                console.error('❌ Error creando gráfica de temperatura:', error);
+                console.error('❌ Error inicializando gráfica de temperatura:', error);
             }
         };
 
-        loadChart();
+        initializeChart();
 
         return () => {
             if (chartInstance.current) {
@@ -204,6 +196,22 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
                 chartInstance.current = null;
             }
         };
+    }, [temperatureHistory.length > 0]); // Solo se ejecuta cuando tenemos datos
+
+    // Actualizar datos del gráfico existente (sin reiniciar animaciones)
+    useEffect(() => {
+        if (chartInstance.current && temperatureHistory.length > 0) {
+            const chart = chartInstance.current;
+
+            // Actualizar datos sin animación disruptiva
+            chart.data.labels = temperatureHistory.map(item => item.time);
+            chart.data.datasets[0].data = temperatureHistory.map(item => item.value);
+
+            // Actualizar con animación suave y rápida
+            chart.update('none'); // Sin animación para cambios pequeños
+
+            console.log('🔄 Gráfica actualizada con nuevos datos (sin reiniciar)');
+        }
     }, [temperatureHistory]);
 
     // Obtener estadísticas
@@ -255,14 +263,8 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
         <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-
                     Temperatura Corporal (Tiempo Real)
                 </h3>
-                <div className="flex items-center space-x-2">
-
-
-
-                </div>
             </div>
 
             {/* Estadísticas */}
@@ -304,9 +306,6 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
             </div>
 
             {/* Información adicional */}
-
-            {/* Rangos de referencia */}
-
         </div>
     );
 };
