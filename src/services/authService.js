@@ -1,12 +1,11 @@
-// src/services/authService.js - CORREGIDO PARA TU API GO
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://vivaltest-back.namixcode.cc';
 
 export const authService = {
     async login(credentials) {
         try {
-            console.log('🔐 Intentando login con tu API Go...');
+            console.log('Intentando login con:', credentials.email);
 
-            const response = await fetch(`${API_BASE_URL}/login`, {
+            const response = await fetch(`${API_BASE_URL}/login/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -17,55 +16,30 @@ export const authService = {
                 })
             });
 
-            if (response.ok) {
-                const result = await response.json();
-                console.log('✅ Login exitoso:', result);
+            const data = await response.json();
+            console.log('Respuesta del servidor:', data);
 
-                // Tu API devuelve { token: "...", user: {...} }
-                const userData = {
-                    id: result.user?.id || result.user?.Id || 1,
-                    username: result.user?.username || result.user?.UserName || credentials.email,
-                    name: result.user?.name || result.user?.UserName || 'Usuario'
-                };
+            if (!response.ok) {
+                throw new Error(data.error || 'Error en el login');
+            }
 
-                // Guardar token y datos del usuario
-                if (result.token) {
-                    localStorage.setItem('token', result.token);
-                }
+            if (data && Array.isArray(data) && data.length > 0) {
+                const userData = data[0];
                 localStorage.setItem('user', JSON.stringify(userData));
                 localStorage.setItem('isAuthenticated', 'true');
 
                 return {
                     success: true,
-                    user: userData,
-                    token: result.token
+                    user: userData
                 };
             } else {
-                const errorData = await response.json();
-                console.error('❌ Error de login:', errorData);
-                return {
-                    success: false,
-                    error: errorData.error || 'Credenciales incorrectas'
-                };
+                throw new Error('Credenciales incorrectas');
             }
         } catch (error) {
-            console.error('❌ Error de conexión:', error);
-
-            // Fallback - permitir acceso en desarrollo si no se puede conectar
-            console.log('🔓 Usando modo bypass por error de conexión');
-            const userData = {
-                id: 1,
-                username: credentials.email || 'admin',
-                name: 'Usuario de Prueba'
-            };
-
-            localStorage.setItem('user', JSON.stringify(userData));
-            localStorage.setItem('isAuthenticated', 'true');
-
+            console.error('Error en login:', error);
             return {
-                success: true,
-                user: userData,
-                error: 'Modo offline - no se pudo conectar con el servidor'
+                success: false,
+                error: error.message || 'Error de conexión con el servidor'
             };
         }
     },
