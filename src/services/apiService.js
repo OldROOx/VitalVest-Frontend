@@ -1,4 +1,4 @@
-// src/services/apiService.js - Adaptado para tu API Go
+// src/services/apiService.js - CORREGIDO PARA TU API GO
 const API_BASE_URL = 'http://localhost:8080';
 
 class ApiService {
@@ -189,25 +189,23 @@ class ApiService {
         const latestMPU = MPU && MPU.length > 0 ? MPU[MPU.length - 1] : null;
 
         return {
-            // Datos actuales (más recientes)
+            // Datos actuales (más recientes) - ADAPTADO A TU ESTRUCTURA
             current: {
-                // BME280 - Datos ambientales
-                temperatura_ambiente: latestBME?.temperatura_ambiente || null,
-                humedad_relativa: latestBME?.humedad_relativa || null,
+                // BME280 - Estructura: temperatura, presion, humedad
+                temperatura_ambiente: latestBME?.temperatura || null,
+                humedad_relativa: latestBME?.humedad || null,
+                presion: latestBME?.presion || null,
 
-                // GSR - Hidratación
+                // GSR - Estructura: conductancia, estado_hidratacion
                 conductancia: latestGSR?.conductancia || null,
                 estado_hidratacion: latestGSR?.estado_hidratacion || null,
 
-                // MLX90614 - Temperatura corporal
-                temperatura_corporal: latestMLX?.temperatura_corporal || null,
+                // MLX90614 - Estructura: temperatura_ambiente, temperatura_objeto
+                temperatura_corporal: latestMLX?.temperatura_objeto || null,
 
-                // MPU6050 - Movimiento y actividad
-                aceleracion_x: latestMPU?.aceleracion_x || null,
-                aceleracion_y: latestMPU?.aceleracion_y || null,
-                aceleracion_z: latestMPU?.aceleracion_z || null,
+                // MPU6050 - Estructura: pasos, fecha
                 pasos: latestMPU?.pasos || null,
-                nivel_actividad: latestMPU?.nivel_actividad || null
+                fecha_actividad: latestMPU?.fecha || null
             },
             // Datos históricos para gráficas
             history: {
@@ -221,24 +219,24 @@ class ApiService {
         };
     }
 
-    // Calcular estadísticas de los datos
+    // Calcular estadísticas de los datos - ADAPTADO A TU ESTRUCTURA
     calculateStats(sensorData) {
         const { BME, GSR, MLX, MPU } = sensorData;
 
-        // Estadísticas de temperatura corporal
-        const mlxTemps = MLX?.map(d => d.temperatura_corporal).filter(t => t != null) || [];
+        // Estadísticas de temperatura corporal (MLX)
+        const mlxTemps = MLX?.map(d => d.temperatura_objeto).filter(t => t != null) || [];
         const avgBodyTemp = mlxTemps.length > 0 ?
             mlxTemps.reduce((a, b) => a + b, 0) / mlxTemps.length : null;
 
-        // Estadísticas de pasos
+        // Estadísticas de pasos (MPU)
         const totalSteps = MPU?.reduce((total, d) => total + (d.pasos || 0), 0) || 0;
 
-        // Estadísticas de temperatura ambiente
-        const bmeTemps = BME?.map(d => d.temperatura_ambiente).filter(t => t != null) || [];
+        // Estadísticas de temperatura ambiente (BME)
+        const bmeTemps = BME?.map(d => d.temperatura).filter(t => t != null) || [];
         const avgAmbientTemp = bmeTemps.length > 0 ?
             bmeTemps.reduce((a, b) => a + b, 0) / bmeTemps.length : null;
 
-        // Estadísticas de hidratación (convertir conductancia a porcentaje)
+        // Estadísticas de hidratación (GSR - convertir conductancia a porcentaje)
         const gsrValues = GSR?.map(d => d.conductancia).filter(c => c != null) || [];
         const avgHydration = gsrValues.length > 0 ?
             (gsrValues.reduce((a, b) => a + b, 0) / gsrValues.length) * 100 : null;
@@ -275,8 +273,9 @@ class ApiService {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    temperatura_ambiente: data.temperatura_ambiente,
-                    humedad_relativa: data.humedad_relativa
+                    temperatura: data.temperatura,
+                    humedad: data.humedad,
+                    presion: data.presion
                 })
             });
             if (!response.ok) throw new Error(`Error creando BME: ${response.status}`);
@@ -311,7 +310,8 @@ class ApiService {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    temperatura_corporal: data.temperatura_corporal
+                    temperatura_ambiente: data.temperatura_ambiente,
+                    temperatura_objeto: data.temperatura_objeto
                 })
             });
             if (!response.ok) throw new Error(`Error creando MLX: ${response.status}`);
@@ -328,11 +328,7 @@ class ApiService {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    aceleracion_x: data.aceleracion_x,
-                    aceleracion_y: data.aceleracion_y,
-                    aceleracion_z: data.aceleracion_z,
-                    pasos: data.pasos,
-                    nivel_actividad: data.nivel_actividad
+                    pasos: data.pasos
                 })
             });
             if (!response.ok) throw new Error(`Error creando MPU: ${response.status}`);

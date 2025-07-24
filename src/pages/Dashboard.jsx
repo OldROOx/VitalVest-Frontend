@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx - VERSIÓN CORREGIDA COMPLETA
+// src/pages/Dashboard.jsx - ERRORES CORREGIDOS
 import { useState, useEffect } from 'react';
 import { DashboardStats } from '../components/organisms/DashboardStats';
 import { Chart } from '../components/molecules/Chart';
@@ -6,11 +6,7 @@ import { useApi } from '../hooks/useApi';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { Badge } from '../components/atoms/Badge';
 import { Icon } from '../components/atoms/Icon';
-import { Button } from '../components/atoms/Button';
-import { MPURingChart } from '../components/molecules/MPURingChart';
 import { BodyTemperatureChart } from '../components/molecules/BodyTemperatureChart';
-import { GyroscopeRingChart } from '../components/molecules/GyroscopeRingChart';
-import { WebSocketTestButton } from '../components/molecules/WebSocketTestButton';
 
 export default function Dashboard() {
     const {
@@ -21,8 +17,7 @@ export default function Dashboard() {
         lastUpdate,
         refreshData,
         startPolling,
-        stopPolling,
-        isPollingActive
+        stopPolling
     } = useApi({
         autoStart: true,
         pollingInterval: 2000,
@@ -52,7 +47,7 @@ export default function Dashboard() {
             hasValidData: hasValidData(),
             summary: getSensorSummary()
         });
-    }, [wsConnected, wsSensorData]);
+    }, [wsConnected, wsSensorData, hasValidData, getSensorSummary]);
 
     // Actualizar gráfica de temperatura con datos del WebSocket
     useEffect(() => {
@@ -81,44 +76,32 @@ export default function Dashboard() {
         }
     }, [wsConnected, wsSensorData.temp_objeto, wsSensorData.temperatura]);
 
-    // Actualizar gráfica de actividad con datos del acelerómetro
+    // Actualizar gráfica de actividad con datos de pasos del MPU6050
     useEffect(() => {
-        if (wsConnected && wsSensorData.aceleracion && wsSensorData.aceleracion.x !== null) {
-            // Calcular magnitud de aceleración
-            const magnitude = Math.sqrt(
-                Math.pow(wsSensorData.aceleracion.x || 0, 2) +
-                Math.pow(wsSensorData.aceleracion.y || 0, 2) +
-                Math.pow(wsSensorData.aceleracion.z || 0, 2)
-            );
+        if (wsConnected && wsSensorData.pasos !== null) {
+            const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+            const today = new Date().getDay();
+            const currentDay = days[today === 0 ? 6 : today - 1];
 
-            // Convertir a pasos estimados (fórmula simple)
-            const estimatedSteps = Math.floor(magnitude * 500);
+            setActivityHistory(prev => {
+                const newData = [...prev];
+                const existingDayIndex = newData.findIndex(d => d.label === currentDay);
 
-            if (estimatedSteps > 0) {
-                const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-                const today = new Date().getDay();
-                const currentDay = days[today === 0 ? 6 : today - 1];
+                if (existingDayIndex >= 0) {
+                    newData[existingDayIndex].value += wsSensorData.pasos;
+                } else {
+                    // Inicializar con datos de la semana
+                    const baseData = days.map(day => ({
+                        label: day,
+                        value: day === currentDay ? wsSensorData.pasos : Math.floor(Math.random() * 5000 + 3000)
+                    }));
+                    return baseData;
+                }
 
-                setActivityHistory(prev => {
-                    const newData = [...prev];
-                    const existingDayIndex = newData.findIndex(d => d.label === currentDay);
-
-                    if (existingDayIndex >= 0) {
-                        newData[existingDayIndex].value += estimatedSteps;
-                    } else {
-                        // Inicializar con datos de la semana
-                        const baseData = days.map(day => ({
-                            label: day,
-                            value: day === currentDay ? estimatedSteps : Math.floor(Math.random() * 5000 + 3000)
-                        }));
-                        return baseData;
-                    }
-
-                    return newData;
-                });
-            }
+                return newData;
+            });
         }
-    }, [wsConnected, wsSensorData.aceleracion]);
+    }, [wsConnected, wsSensorData.pasos]);
 
     // Inicializar gráficas con datos por defecto si están vacías
     useEffect(() => {
@@ -138,27 +121,23 @@ export default function Dashboard() {
             }));
             setActivityHistory(defaultActivityData);
         }
-    }, []);
+    }, []); // Sin dependencias para que solo se ejecute una vez
 
     // Funciones helper
     const isValidNumber = (value) => {
         return value !== null && value !== undefined && !isNaN(value) && isFinite(value);
     };
 
-    const getSafeValue = (value, fallback = 0) => {
-        return isValidNumber(value) ? value : fallback;
-    };
-
     const formatValue = (value, decimals = 1) => {
         return isValidNumber(value) ? Number(value).toFixed(decimals) : '--';
     };
 
-    // Combinar datos para estadísticas
+    // Combinar datos para estadísticas (adaptado a tu estructura de backend)
     const stats = {
         bodyTemp: wsSensorData.temp_objeto || currentValues?.temperatura_corporal || 36.5,
-        steps: currentValues?.pasos || 0,
+        steps: wsSensorData.pasos || currentValues?.pasos || 0,
         ambientTemp: wsSensorData.temperatura || currentValues?.temperatura_ambiente || 22.0,
-        hydration: wsSensorData.humedad || (currentValues?.conductancia ? (currentValues.conductancia * 100) : 65)
+        hydration: wsSensorData.porcentaje || (currentValues?.conductancia ? (currentValues.conductancia * 100) : 65)
     };
 
     return (
@@ -170,7 +149,7 @@ export default function Dashboard() {
             {/* Estadísticas principales */}
             <DashboardStats stats={stats} />
 
-            {/* DATOS EN TIEMPO REAL DEL WEBSOCKET */}
+            {/* DATOS EN TIEMPO REAL DEL WEBSOCKET - ADAPTADO A TU BACKEND */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -185,7 +164,7 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Grid de sensores */}
+                {/* Grid de sensores - ESTRUCTURA DE TU BACKEND */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     {/* Temperatura Ambiente (BME280) */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
@@ -271,71 +250,59 @@ export default function Dashboard() {
                         </p>
                     </div>
 
-                    {/* Aceleración */}
+                    {/* Pasos (MPU6050) */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
-                        isValidNumber(wsSensorData?.aceleracion?.x)
+                        isValidNumber(wsSensorData?.pasos)
                             ? 'bg-orange-50 border-orange-200'
                             : 'bg-gray-50 border-gray-200'
                     }`}>
                         <div className="flex items-center justify-center mb-2">
                             <Icon name="activity" size={20} className={`mr-2 ${
-                                isValidNumber(wsSensorData?.aceleracion?.x) ? 'text-orange-600' : 'text-gray-400'
+                                isValidNumber(wsSensorData?.pasos) ? 'text-orange-600' : 'text-gray-400'
                             }`} />
                             <span className={`text-sm font-medium ${
-                                isValidNumber(wsSensorData?.aceleracion?.x) ? 'text-orange-800' : 'text-gray-600'
+                                isValidNumber(wsSensorData?.pasos) ? 'text-orange-800' : 'text-gray-600'
                             }`}>
-                                Aceleración
+                                Pasos
                             </span>
                         </div>
                         <p className={`text-2xl font-bold ${
-                            isValidNumber(wsSensorData?.aceleracion?.x) ? 'text-orange-600' : 'text-gray-400'
+                            isValidNumber(wsSensorData?.pasos) ? 'text-orange-600' : 'text-gray-400'
                         }`}>
-                            {isValidNumber(wsSensorData?.aceleracion?.x) ?
-                                Math.sqrt(
-                                    Math.pow(getSafeValue(wsSensorData.aceleracion.x), 2) +
-                                    Math.pow(getSafeValue(wsSensorData.aceleracion.y), 2) +
-                                    Math.pow(getSafeValue(wsSensorData.aceleracion.z), 2)
-                                ).toFixed(2) : '--'
-                            }
+                            {wsSensorData?.pasos || '--'}
                         </p>
                         <p className={`text-xs mt-1 ${
-                            isValidNumber(wsSensorData?.aceleracion?.x) ? 'text-orange-600' : 'text-gray-500'
+                            isValidNumber(wsSensorData?.pasos) ? 'text-orange-600' : 'text-gray-500'
                         }`}>
-                            g (magnitud)
+                            MPU6050
                         </p>
                     </div>
 
-                    {/* Giroscopio */}
+                    {/* Hidratación (GSR) */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
-                        isValidNumber(wsSensorData?.giroscopio?.x)
+                        isValidNumber(wsSensorData?.porcentaje)
                             ? 'bg-indigo-50 border-indigo-200'
                             : 'bg-gray-50 border-gray-200'
                     }`}>
                         <div className="flex items-center justify-center mb-2">
-                            <Icon name="sync" size={20} className={`mr-2 ${
-                                isValidNumber(wsSensorData?.giroscopio?.x) ? 'text-indigo-600' : 'text-gray-400'
+                            <Icon name="droplet" size={20} className={`mr-2 ${
+                                isValidNumber(wsSensorData?.porcentaje) ? 'text-indigo-600' : 'text-gray-400'
                             }`} />
                             <span className={`text-sm font-medium ${
-                                isValidNumber(wsSensorData?.giroscopio?.x) ? 'text-indigo-800' : 'text-gray-600'
+                                isValidNumber(wsSensorData?.porcentaje) ? 'text-indigo-800' : 'text-gray-600'
                             }`}>
-                                Giroscopio
+                                Hidratación
                             </span>
                         </div>
                         <p className={`text-2xl font-bold ${
-                            isValidNumber(wsSensorData?.giroscopio?.x) ? 'text-indigo-600' : 'text-gray-400'
+                            isValidNumber(wsSensorData?.porcentaje) ? 'text-indigo-600' : 'text-gray-400'
                         }`}>
-                            {isValidNumber(wsSensorData?.giroscopio?.x) ?
-                                Math.sqrt(
-                                    Math.pow(getSafeValue(wsSensorData.giroscopio.x), 2) +
-                                    Math.pow(getSafeValue(wsSensorData.giroscopio.y), 2) +
-                                    Math.pow(getSafeValue(wsSensorData.giroscopio.z), 2)
-                                ).toFixed(0) : '--'
-                            }
+                            {formatValue(wsSensorData?.porcentaje, 0)}%
                         </p>
                         <p className={`text-xs mt-1 ${
-                            isValidNumber(wsSensorData?.giroscopio?.x) ? 'text-indigo-600' : 'text-gray-500'
+                            isValidNumber(wsSensorData?.porcentaje) ? 'text-indigo-600' : 'text-gray-500'
                         }`}>
-                            °/s (magnitud)
+                            GSR
                         </p>
                     </div>
 
@@ -375,7 +342,7 @@ export default function Dashboard() {
                             <strong>Último mensaje recibido:</strong> {new Date(lastMessage.timestamp).toLocaleString()}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                            Datos: {Object.keys(lastMessage).filter(key => key !== 'timestamp').join(', ')}
+                            Sensores: {Object.keys(lastMessage).filter(key => key !== 'timestamp').join(', ')}
                         </p>
                     </div>
                 )}
@@ -386,7 +353,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-lg border border-gray-200">
                     <Chart
                         type="bar"
-                        title="Actividad Semanal (Basada en Acelerómetro)"
+                        title="Actividad Semanal (Pasos)"
                         data={activityHistory}
                     />
                 </div>
@@ -400,44 +367,44 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* NUEVA GRÁFICA DE ANILLOS DEL GIROSCOPIO */}
-            {wsConnected && hasValidData() && isValidNumber(wsSensorData?.giroscopio?.x) && (
-                <GyroscopeRingChart
-                    data={wsSensorData}
-                    isConnected={wsConnected}
-                />
-            )}
-
-            {/* Mostrar gráfica con datos simulados si no hay conexión */}
-            {(!wsConnected || !hasValidData() || !isValidNumber(wsSensorData?.giroscopio?.x)) && (
-                <GyroscopeRingChart
-                    data={{
-                        giroscopio: {
-                            x: Math.sin(Date.now() / 1000) * 50,
-                            y: Math.cos(Date.now() / 1000) * 30,
-                            z: Math.sin(Date.now() / 1500) * 25
-                        }
-                    }}
-                    isConnected={false}
-                />
-            )}
-
-            {/* Gráficas avanzadas de sensores MPU6050 */}
-            {wsConnected && hasValidData() && (
-                <MPURingChart
-                    data={{
-                        aceleracion: wsSensorData.aceleracion || { x: 0, y: 0, z: 0 },
-                        giroscopio: wsSensorData.giroscopio || { x: 0, y: 0, z: 0 }
-                    }}
-                    isConnected={wsConnected}
-                />
-            )}
-
             {/* Gráfica de temperatura corporal */}
             <BodyTemperatureChart
                 data={wsSensorData?.temp_objeto}
                 isConnected={wsConnected}
             />
+
+            {/* MPU Ring Chart - Solo si hay datos de pasos */}
+            {wsConnected && isValidNumber(wsSensorData?.pasos) && (
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Actividad Física - MPU6050
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="text-center">
+                            <div className="bg-blue-100 rounded-lg p-4">
+                                <p className="text-2xl font-bold text-blue-600">{wsSensorData.pasos}</p>
+                                <p className="text-sm text-blue-800">Pasos Detectados</p>
+                            </div>
+                        </div>
+                        <div className="text-center">
+                            <div className="bg-green-100 rounded-lg p-4">
+                                <p className="text-2xl font-bold text-green-600">
+                                    {wsSensorData.pasos > 50 ? 'Alta' : wsSensorData.pasos > 20 ? 'Media' : 'Baja'}
+                                </p>
+                                <p className="text-sm text-green-800">Actividad</p>
+                            </div>
+                        </div>
+                        <div className="text-center">
+                            <div className="bg-orange-100 rounded-lg p-4">
+                                <p className="text-2xl font-bold text-orange-600">
+                                    {Math.floor((wsSensorData.pasos / 100) * 100)}%
+                                </p>
+                                <p className="text-sm text-orange-800">Meta Diaria</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

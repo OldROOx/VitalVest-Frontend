@@ -1,5 +1,5 @@
-// src/components/organisms/Layout.jsx - VERSION MEJORADA CON SIDEBAR DESLIZABLE
-import { useState, useRef, useEffect } from 'react';
+// src/components/organisms/Layout.jsx - ERRORES CORREGIDOS
+import { useState } from 'react';
 import { Icon } from '../atoms/Icon';
 import { Button } from '../atoms/Button';
 import { NavigationItem } from '../molecules/NavigationItem';
@@ -9,12 +9,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 export default function Layout({ children, currentPage, onNavigate, onLogout, currentUser }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStartX, setDragStartX] = useState(0);
-    const [dragCurrentX, setDragCurrentX] = useState(0);
-    const [sidebarTransform, setSidebarTransform] = useState(0);
 
-    const sidebarRef = useRef(null);
     const { isConnected, lastMessage, reconnect } = useWebSocket();
 
     const navigation = [
@@ -23,126 +18,21 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
         { id: 'sync', name: 'Sincronización', icon: 'sync' }
     ];
 
-    // Función para manejar el inicio del arrastre
-    const handleMouseDown = (e) => {
-        if (window.innerWidth >= 1024) { // Solo en desktop
-            setIsDragging(true);
-            setDragStartX(e.clientX);
-            setDragCurrentX(e.clientX);
-            document.body.style.userSelect = 'none';
-        }
-    };
-
-    const handleTouchStart = (e) => {
-        if (window.innerWidth >= 1024) { // Solo en desktop
-            setIsDragging(true);
-            setDragStartX(e.touches[0].clientX);
-            setDragCurrentX(e.touches[0].clientX);
-        }
-    };
-
-    // Función para manejar el movimiento del arrastre
-    const handleMouseMove = (e) => {
-        if (!isDragging) return;
-
-        const deltaX = e.clientX - dragStartX;
-        const maxDrag = -200; // Máximo arrastre hacia la izquierda
-        const clampedDelta = Math.min(0, Math.max(maxDrag, deltaX));
-
-        setDragCurrentX(e.clientX);
-        setSidebarTransform(clampedDelta);
-    };
-
-    const handleTouchMove = (e) => {
-        if (!isDragging) return;
-
-        const deltaX = e.touches[0].clientX - dragStartX;
-        const maxDrag = -200;
-        const clampedDelta = Math.min(0, Math.max(maxDrag, deltaX));
-
-        setDragCurrentX(e.touches[0].clientX);
-        setSidebarTransform(clampedDelta);
-    };
-
-    // Función para manejar el final del arrastre
-    const handleDragEnd = () => {
-        if (!isDragging) return;
-
-        const deltaX = dragCurrentX - dragStartX;
-        const threshold = -100; // Umbral para colapsar
-
-        if (deltaX < threshold) {
-            setSidebarCollapsed(true);
-        } else {
-            setSidebarCollapsed(false);
-        }
-
-        setIsDragging(false);
-        setSidebarTransform(0);
-        document.body.style.userSelect = '';
-    };
-
-    // Event listeners globales para el arrastre
-    useEffect(() => {
-        const handleGlobalMouseMove = (e) => handleMouseMove(e);
-        const handleGlobalMouseUp = () => handleDragEnd();
-        const handleGlobalTouchMove = (e) => handleTouchMove(e);
-        const handleGlobalTouchEnd = () => handleDragEnd();
-
-        if (isDragging) {
-            document.addEventListener('mousemove', handleGlobalMouseMove);
-            document.addEventListener('mouseup', handleGlobalMouseUp);
-            document.addEventListener('touchmove', handleGlobalTouchMove);
-            document.addEventListener('touchend', handleGlobalTouchEnd);
-        }
-
-        return () => {
-            document.removeEventListener('mousemove', handleGlobalMouseMove);
-            document.removeEventListener('mouseup', handleGlobalMouseUp);
-            document.removeEventListener('touchmove', handleGlobalTouchMove);
-            document.removeEventListener('touchend', handleGlobalTouchEnd);
-        };
-    }, [isDragging, dragStartX, dragCurrentX]);
-
     // Función para alternar colapso del sidebar
     const toggleSidebarCollapse = () => {
         setSidebarCollapsed(!sidebarCollapsed);
-    };
-
-    // Calcular estilos del sidebar
-    const getSidebarStyles = () => {
-        let transform = sidebarTransform;
-
-        if (sidebarCollapsed && !isDragging) {
-            transform = -200; // Sidebar colapsado
-        }
-
-        return {
-            transform: `translateX(${transform}px)`,
-            transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            width: sidebarCollapsed ? '64px' : '256px'
-        };
     };
 
     return (
         <div className="flex h-screen w-full bg-gray-50 overflow-hidden">
             {/* Sidebar */}
             <div
-                ref={sidebarRef}
                 className={`bg-white min-h-screen shadow-lg flex-shrink-0 relative ${
                     sidebarOpen ? 'fixed inset-y-0 left-0 z-50' : 'hidden'
-                } lg:relative lg:block`}
-                style={window.innerWidth >= 1024 ? getSidebarStyles() : {}}
-                onMouseDown={handleMouseDown}
-                onTouchStart={handleTouchStart}
+                } lg:relative lg:block ${
+                    sidebarCollapsed ? 'w-16' : 'w-64'
+                } transition-all duration-300`}
             >
-                {/* Barra de arrastre visual */}
-                <div className={`absolute right-0 top-0 bottom-0 w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors duration-200 ${
-                    isDragging ? 'bg-blue-500' : ''
-                } hidden lg:block`}>
-                    <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-3 h-8 bg-gray-400 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-200"></div>
-                </div>
-
                 {/* Botón para colapsar/expandir */}
                 <button
                     onClick={toggleSidebarCollapse}
@@ -172,7 +62,16 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
                 </div>
 
                 {/* WebSocket Status en el sidebar */}
-
+                {!sidebarCollapsed && (
+                    <div className="p-4 border-b border-gray-200">
+                        <WebSocketIndicator
+                            isConnected={isConnected}
+                            lastMessage={lastMessage}
+                            onReconnect={reconnect}
+                            className="text-xs"
+                        />
+                    </div>
+                )}
 
                 {/* Navigation */}
                 <nav className="p-4 space-y-2">
@@ -183,7 +82,8 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
                                 label={sidebarCollapsed ? '' : item.name}
                                 active={currentPage === item.id}
                                 onClick={() => onNavigate(item.id)}
-                                className={`${sidebarCollapsed ? 'justify-center px-2' : ''} transition-all duration-200`}
+                                collapsed={sidebarCollapsed}
+                                className="transition-all duration-200"
                             />
                             {/* Tooltip para modo colapsado */}
                             {sidebarCollapsed && (
@@ -296,13 +196,6 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
                     className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40"
                     onClick={() => setSidebarOpen(false)}
                 />
-            )}
-
-            {/* Indicador visual de arrastre */}
-            {isDragging && (
-                <div className="fixed inset-0 pointer-events-none z-50">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-lg"></div>
-                </div>
             )}
         </div>
     );

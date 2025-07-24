@@ -1,16 +1,15 @@
-// src/pages/Configuration.jsx
+// src/pages/Configuration.jsx - CORREGIDO PARA TU BACKEND
 import { useState } from 'react'
 import { Button } from '../components/atoms/Button'
 import { FormField } from '../components/molecules/FormField'
 import { SensorPanel } from '../components/organisms/SensorPanel'
-import { WebSocketTestButton } from '../components/molecules/WebSocketTestButton'
 import { useApi } from '../hooks/useApi'
 import { Badge } from '../components/atoms/Badge'
 import { Icon } from '../components/atoms/Icon'
 
 export default function Configuration() {
     const [userSelection, setUserSelection] = useState('')
-    const [connectionMode, setConnectionMode] = useState('online') // Cambiar a online por defecto
+    const [connectionMode, setConnectionMode] = useState('online')
 
     const {
         isConnected,
@@ -23,7 +22,7 @@ export default function Configuration() {
         pollingInterval: 3000
     });
 
-    // Configuración de sensores basada en datos reales de la API
+    // Configuración de sensores basada en tu estructura de API
     const sensors = [
         {
             id: 1,
@@ -54,12 +53,11 @@ export default function Configuration() {
         },
         {
             id: 4,
-            name: 'Sensor MPU6050 (Movimiento)',
-            status: (currentValues?.aceleracion_x !== null || currentValues?.pasos !== null) ? 'Activo' : 'Inactivo',
+            name: 'Sensor MPU6050 (Pasos)',
+            status: currentValues?.pasos !== null ? 'Activo' : 'Inactivo',
             lastReading: currentValues?.pasos !== null ?
-                `${currentValues.pasos} pasos - ${currentValues.nivel_actividad || 'N/A'}` :
-                currentValues?.aceleracion_x !== null ?
-                    `Aceleración detectada` : 'Sin datos',
+                `${currentValues.pasos} pasos` :
+                'Sin datos',
             icon: 'activity'
         }
     ]
@@ -80,12 +78,6 @@ export default function Configuration() {
         alert(`Modo ${mode === 'online' ? 'Online' : 'Offline'} activado`)
     }
 
-
-
-
-
-
-
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -94,7 +86,28 @@ export default function Configuration() {
             </div>
 
             {/* API Status and Control */}
-
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    <Icon name="activity" size={20} className="inline mr-2" />
+                    Estado de la API
+                </h3>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} ${isConnected ? 'animate-pulse' : ''}`}></div>
+                        <div>
+                            <h4 className="font-medium text-gray-900">
+                                API VitalVest - {isConnected ? 'Conectada' : 'Desconectada'}
+                            </h4>
+                            <p className="text-sm text-gray-500">
+                                Endpoint: localhost:8080 • {isConnected ? 'Obteniendo datos' : 'Sin conexión'}
+                            </p>
+                        </div>
+                    </div>
+                    <Badge variant={isConnected ? 'success' : 'danger'} size="sm">
+                        {isConnected ? 'Online' : 'Offline'}
+                    </Badge>
+                </div>
+            </div>
 
             {/* User Selection */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -115,16 +128,16 @@ export default function Configuration() {
                                 <option value="">Seleccionar usuario</option>
                                 {users && users.length > 0 ? (
                                     users.map((user, index) => (
-                                        <option key={index} value={user.Name || user.name || `Usuario ${index + 1}`}>
-                                            {user.Name || user.name || `Usuario ${index + 1}`}
-                                            {user.Age && ` (${user.Age} años)`}
+                                        <option key={index} value={user.UserName || user.username || `Usuario ${index + 1}`}>
+                                            {user.UserName || user.username || `Usuario ${index + 1}`}
+                                            {user.Id && ` (ID: ${user.Id})`}
                                         </option>
                                     ))
                                 ) : (
                                     <>
-                                        <option value="Juan Pérez">Juan Pérez (Por defecto)</option>
-                                        <option value="María García">María García (Por defecto)</option>
-                                        <option value="Carlos López">Carlos López (Por defecto)</option>
+                                        <option value="admin">admin (Por defecto)</option>
+                                        <option value="juan">juan (Por defecto)</option>
+                                        <option value="maria">maria (Por defecto)</option>
                                     </>
                                 )}
                             </select>
@@ -244,7 +257,7 @@ export default function Configuration() {
             {/* Sensor Status */}
             <SensorPanel sensors={sensors} />
 
-            {/* Real-time Sensor Data Preview */}
+            {/* Real-time Sensor Data Preview - ADAPTADO A TU ESTRUCTURA */}
             {isConnected && currentValues && Object.keys(currentValues).some(key => currentValues[key] !== null) && (
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -261,6 +274,9 @@ export default function Configuration() {
                                     </p>
                                     <p className="text-sm text-blue-700">
                                         Humedad: {currentValues.humedad_relativa?.toFixed(1) || '--'}%
+                                    </p>
+                                    <p className="text-sm text-blue-700">
+                                        Presión: {currentValues.presion?.toFixed(0) || '--'} hPa
                                     </p>
                                 </div>
                             </div>
@@ -294,7 +310,7 @@ export default function Configuration() {
                         )}
 
                         {/* MPU6050 */}
-                        {(currentValues.pasos !== null || currentValues.aceleracion_x !== null) && (
+                        {currentValues.pasos !== null && (
                             <div className="bg-purple-50 p-4 rounded-lg">
                                 <h4 className="font-medium text-purple-900">MPU6050</h4>
                                 <div className="space-y-1 mt-2">
@@ -302,13 +318,8 @@ export default function Configuration() {
                                         Pasos: {currentValues.pasos || '--'}
                                     </p>
                                     <p className="text-sm text-purple-700">
-                                        Actividad: {currentValues.nivel_actividad || '--'}
+                                        Fecha: {currentValues.fecha_actividad || '--'}
                                     </p>
-                                    {currentValues.aceleracion_x !== null && (
-                                        <p className="text-sm text-purple-700">
-                                            Accel: {currentValues.aceleracion_x?.toFixed(2) || '--'} g
-                                        </p>
-                                    )}
                                 </div>
                             </div>
                         )}

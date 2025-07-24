@@ -1,4 +1,4 @@
-// src/hooks/useWebSocket.js - VERSIÓN CORREGIDA
+// src/hooks/useWebSocket.js - CORREGIDO PARA TU BACKEND
 import { useState, useEffect, useRef } from 'react';
 import { websocketService } from '../services/websocketService';
 
@@ -7,26 +7,20 @@ export const useWebSocket = () => {
     const [lastMessage, setLastMessage] = useState(null);
     const [connectionError, setConnectionError] = useState(null);
     const [sensorData, setSensorData] = useState({
-        // BME280 - Datos ambientales
+        // BME280 - Datos ambientales (estructura de tu backend)
         temperatura: null,
         presion: null,
         humedad: null,
 
-        // MPU6050 - Aceleración y giroscopio
-        aceleracion: {
-            x: null,
-            y: null,
-            z: null
-        },
-        giroscopio: {
-            x: null,
-            y: null,
-            z: null
-        },
+        // MPU6050 - Solo pasos según tu struct
+        pasos: null,
 
         // MLX90614 - Temperatura corporal
         temperatura_ambiente: null,
-        temp_objeto: null
+        temp_objeto: null,
+
+        // GSR - Porcentaje de hidratación
+        porcentaje: null
     });
 
     const retryTimeoutRef = useRef(null);
@@ -47,47 +41,32 @@ export const useWebSocket = () => {
                 timestamp: new Date().toISOString()
             });
 
-            // Procesar datos según la estructura del backend
+            // Procesar datos según la estructura exacta de tu backend
             setSensorData(prevData => {
                 const newData = { ...prevData };
 
-                // Mapear datos del BME280
+                // Mapear datos del BME280 (estructura: bme280.temperatura, etc.)
                 if (data.bme280) {
                     newData.temperatura = data.bme280.temperatura;
                     newData.presion = data.bme280.presion;
                     newData.humedad = data.bme280.humedad;
                 }
 
-                // Mapear datos del MPU6050
+                // Mapear datos del MPU6050 (estructura: mpu6050.pasos)
                 if (data.mpu6050) {
-                    if (data.mpu6050.aceleracion) {
-                        newData.aceleracion = {
-                            x: data.mpu6050.aceleracion.x,
-                            y: data.mpu6050.aceleracion.y,
-                            z: data.mpu6050.aceleracion.z
-                        };
-                    }
-                    if (data.mpu6050.giroscopio) {
-                        newData.giroscopio = {
-                            x: data.mpu6050.giroscopio.x,
-                            y: data.mpu6050.giroscopio.y,
-                            z: data.mpu6050.giroscopio.z
-                        };
-                    }
+                    newData.pasos = data.mpu6050.pasos;
                 }
 
-                // Mapear datos del MLX90614
+                // Mapear datos del MLX90614 (estructura: mlx90614.temperatura_ambiente, temp_objeto)
                 if (data.mlx90614) {
                     newData.temperatura_ambiente = data.mlx90614.temperatura_ambiente;
                     newData.temp_objeto = data.mlx90614.temp_objeto;
                 }
 
-                // Soporte para datos directos (por si envías estructura plana)
-                if (data.temperatura !== undefined) newData.temperatura = data.temperatura;
-                if (data.presion !== undefined) newData.presion = data.presion;
-                if (data.humedad !== undefined) newData.humedad = data.humedad;
-                if (data.aceleracion) newData.aceleracion = data.aceleracion;
-                if (data.giroscopio) newData.giroscopio = data.giroscopio;
+                // Mapear datos del GSR (estructura: GSR.porcentaje)
+                if (data.GSR) {
+                    newData.porcentaje = data.GSR.porcentaje;
+                }
 
                 console.log('🔄 Datos de sensores actualizados:', newData);
                 return newData;
@@ -131,18 +110,10 @@ export const useWebSocket = () => {
             temperatura: 25.5 + Math.random() * 10,
             presion: 1013 + Math.random() * 50,
             humedad: 45 + Math.random() * 30,
-            aceleracion: {
-                x: (Math.random() - 0.5) * 2,
-                y: (Math.random() - 0.5) * 2,
-                z: (Math.random() - 0.5) * 2
-            },
-            giroscopio: {
-                x: (Math.random() - 0.5) * 100,
-                y: (Math.random() - 0.5) * 100,
-                z: (Math.random() - 0.5) * 100
-            },
+            pasos: Math.floor(Math.random() * 100),
             temperatura_ambiente: 22 + Math.random() * 5,
-            temp_objeto: 36 + Math.random() * 2
+            temp_objeto: 36 + Math.random() * 2,
+            porcentaje: Math.floor(Math.random() * 100)
         };
     };
 
@@ -150,8 +121,9 @@ export const useWebSocket = () => {
     const hasValidData = () => {
         return (
             sensorData.temperatura !== null ||
-            sensorData.aceleracion.x !== null ||
-            sensorData.temp_objeto !== null
+            sensorData.pasos !== null ||
+            sensorData.temp_objeto !== null ||
+            sensorData.porcentaje !== null
         );
     };
 
@@ -166,9 +138,9 @@ export const useWebSocket = () => {
 
         // Funciones auxiliares para verificar si hay datos específicos
         hasTemperature: () => sensorData.temperatura !== null,
-        hasAcceleration: () => sensorData.aceleracion.x !== null,
-        hasGyroscope: () => sensorData.giroscopio.x !== null,
+        hasSteps: () => sensorData.pasos !== null,
         hasBodyTemperature: () => sensorData.temp_objeto !== null,
+        hasHydration: () => sensorData.porcentaje !== null,
 
         // Función para obtener resumen de los datos
         getSensorSummary: () => ({
@@ -177,9 +149,9 @@ export const useWebSocket = () => {
                 temperatura: sensorData.temperatura !== null,
                 presion: sensorData.presion !== null,
                 humedad: sensorData.humedad !== null,
-                aceleracion: sensorData.aceleracion.x !== null,
-                giroscopio: sensorData.giroscopio.x !== null,
-                temp_objeto: sensorData.temp_objeto !== null
+                pasos: sensorData.pasos !== null,
+                temp_objeto: sensorData.temp_objeto !== null,
+                porcentaje: sensorData.porcentaje !== null
             },
             lastUpdate: lastMessage?.timestamp
         })

@@ -1,8 +1,8 @@
-// src/services/websocketService.js - VERSIÓN CORREGIDA
+// src/services/websocketService.js - CORREGIDO PARA TU BACKEND
 class WebSocketService {
     constructor() {
         this.ws = null;
-        this.url = 'ws://localhost:3000/ws';  // Usar puerto 3000 según tu backend
+        this.url = 'ws://localhost:3000/ws';  // Tu servidor WebSocket en puerto 3000
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectInterval = 3000;
@@ -30,7 +30,7 @@ class WebSocketService {
                     const data = JSON.parse(event.data);
                     console.log('📦 Mensaje recibido por WebSocket:', data);
 
-                    // Validar que los datos tengan la estructura esperada
+                    // Validar que los datos tengan la estructura esperada de tu backend
                     if (data && typeof data === 'object') {
                         this.callbacks.onMessage.forEach(callback => callback(data));
                     } else {
@@ -71,7 +71,7 @@ class WebSocketService {
     disconnect() {
         if (this.ws) {
             console.log('🔌 Desconectando WebSocket...');
-            this.ws.close(1000, 'Desconexión manual'); // Código 1000 = cierre normal
+            this.ws.close(1000, 'Desconexión manual');
             this.ws = null;
         }
     }
