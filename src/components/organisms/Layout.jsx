@@ -19,7 +19,6 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
 
     const navigation = [
         { id: 'dashboard', name: 'Dashboard', icon: 'dashboard' },
-        { id: 'sessions', name: 'Sesiones', icon: 'sessions' },
         { id: 'configuration', name: 'Configuración', icon: 'config' },
         { id: 'sync', name: 'Sincronización', icon: 'sync' }
     ];

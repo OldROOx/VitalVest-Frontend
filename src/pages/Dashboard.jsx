@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx - VERSIÓN CORREGIDA
+// src/pages/Dashboard.jsx - VERSIÓN CORREGIDA COMPLETA
 import { useState, useEffect } from 'react';
 import { DashboardStats } from '../components/organisms/DashboardStats';
 import { Chart } from '../components/molecules/Chart';
@@ -9,6 +9,7 @@ import { Icon } from '../components/atoms/Icon';
 import { Button } from '../components/atoms/Button';
 import { MPURingChart } from '../components/molecules/MPURingChart';
 import { BodyTemperatureChart } from '../components/molecules/BodyTemperatureChart';
+import { GyroscopeRingChart } from '../components/molecules/GyroscopeRingChart';
 import { WebSocketTestButton } from '../components/molecules/WebSocketTestButton';
 
 export default function Dashboard() {
@@ -152,42 +153,12 @@ export default function Dashboard() {
         return isValidNumber(value) ? Number(value).toFixed(decimals) : '--';
     };
 
-    // Contar sensores activos
-    const getActiveSensorsCount = () => {
-        if (!wsConnected || !hasValidData()) return 0;
-
-        let count = 0;
-        if (isValidNumber(wsSensorData.temperatura)) count++;
-        if (isValidNumber(wsSensorData.presion)) count++;
-        if (isValidNumber(wsSensorData.humedad)) count++;
-        if (isValidNumber(wsSensorData.aceleracion?.x)) count++;
-        if (isValidNumber(wsSensorData.giroscopio?.x)) count++;
-        if (isValidNumber(wsSensorData.temp_objeto)) count++;
-
-        return count;
-    };
-
     // Combinar datos para estadísticas
     const stats = {
         bodyTemp: wsSensorData.temp_objeto || currentValues?.temperatura_corporal || 36.5,
         steps: currentValues?.pasos || 0,
         ambientTemp: wsSensorData.temperatura || currentValues?.temperatura_ambiente || 22.0,
         hydration: wsSensorData.humedad || (currentValues?.conductancia ? (currentValues.conductancia * 100) : 65)
-    };
-
-    const getLastUpdateText = () => {
-        const updateTime = wsConnected && lastMessage ?
-            new Date(lastMessage.timestamp) : lastUpdate;
-
-        if (!updateTime) return 'Sin datos';
-
-        const now = new Date();
-        const diffSeconds = Math.floor((now - updateTime) / 1000);
-
-        if (diffSeconds < 10) return 'Ahora mismo';
-        if (diffSeconds < 60) return `hace ${diffSeconds}s`;
-        if (diffSeconds < 3600) return `hace ${Math.floor(diffSeconds / 60)}m`;
-        return `hace ${Math.floor(diffSeconds / 3600)}h`;
     };
 
     return (
@@ -197,19 +168,18 @@ export default function Dashboard() {
             </div>
 
             {/* Estadísticas principales */}
-
-
+            <DashboardStats stats={stats} />
 
             {/* DATOS EN TIEMPO REAL DEL WEBSOCKET */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">
-                        Datos
+                        Datos en Tiempo Real
                     </h3>
                     <div className="flex items-center space-x-2">
                         {wsConnected && (
                             <Badge variant="success" size="sm">
-                                Conectado
+                                WebSocket Conectado
                             </Badge>
                         )}
                     </div>
@@ -224,7 +194,9 @@ export default function Dashboard() {
                             : 'bg-gray-50 border-gray-200'
                     }`}>
                         <div className="flex items-center justify-center mb-2">
-
+                            <Icon name="thermometer" size={20} className={`mr-2 ${
+                                isValidNumber(wsSensorData?.temperatura) ? 'text-blue-600' : 'text-gray-400'
+                            }`} />
                             <span className={`text-sm font-medium ${
                                 isValidNumber(wsSensorData?.temperatura) ? 'text-blue-800' : 'text-gray-600'
                             }`}>
@@ -299,9 +271,6 @@ export default function Dashboard() {
                         </p>
                     </div>
 
-                    {/* Presión */}
-
-
                     {/* Aceleración */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
                         isValidNumber(wsSensorData?.aceleracion?.x)
@@ -315,7 +284,7 @@ export default function Dashboard() {
                             <span className={`text-sm font-medium ${
                                 isValidNumber(wsSensorData?.aceleracion?.x) ? 'text-orange-800' : 'text-gray-600'
                             }`}>
-                                Pasos
+                                Aceleración
                             </span>
                         </div>
                         <p className={`text-2xl font-bold ${
@@ -369,6 +338,34 @@ export default function Dashboard() {
                             °/s (magnitud)
                         </p>
                     </div>
+
+                    {/* Presión Atmosférica */}
+                    <div className={`rounded-lg p-4 text-center border-2 ${
+                        isValidNumber(wsSensorData?.presion)
+                            ? 'bg-purple-50 border-purple-200'
+                            : 'bg-gray-50 border-gray-200'
+                    }`}>
+                        <div className="flex items-center justify-center mb-2">
+                            <Icon name="activity" size={20} className={`mr-2 ${
+                                isValidNumber(wsSensorData?.presion) ? 'text-purple-600' : 'text-gray-400'
+                            }`} />
+                            <span className={`text-sm font-medium ${
+                                isValidNumber(wsSensorData?.presion) ? 'text-purple-800' : 'text-gray-600'
+                            }`}>
+                                Presión
+                            </span>
+                        </div>
+                        <p className={`text-2xl font-bold ${
+                            isValidNumber(wsSensorData?.presion) ? 'text-purple-600' : 'text-gray-400'
+                        }`}>
+                            {formatValue(wsSensorData?.presion, 0)}
+                        </p>
+                        <p className={`text-xs mt-1 ${
+                            isValidNumber(wsSensorData?.presion) ? 'text-purple-600' : 'text-gray-500'
+                        }`}>
+                            hPa
+                        </p>
+                    </div>
                 </div>
 
                 {/* Información de último mensaje */}
@@ -403,6 +400,28 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            {/* NUEVA GRÁFICA DE ANILLOS DEL GIROSCOPIO */}
+            {wsConnected && hasValidData() && isValidNumber(wsSensorData?.giroscopio?.x) && (
+                <GyroscopeRingChart
+                    data={wsSensorData}
+                    isConnected={wsConnected}
+                />
+            )}
+
+            {/* Mostrar gráfica con datos simulados si no hay conexión */}
+            {(!wsConnected || !hasValidData() || !isValidNumber(wsSensorData?.giroscopio?.x)) && (
+                <GyroscopeRingChart
+                    data={{
+                        giroscopio: {
+                            x: Math.sin(Date.now() / 1000) * 50,
+                            y: Math.cos(Date.now() / 1000) * 30,
+                            z: Math.sin(Date.now() / 1500) * 25
+                        }
+                    }}
+                    isConnected={false}
+                />
+            )}
+
             {/* Gráficas avanzadas de sensores MPU6050 */}
             {wsConnected && hasValidData() && (
                 <MPURingChart
@@ -419,8 +438,6 @@ export default function Dashboard() {
                 data={wsSensorData?.temp_objeto}
                 isConnected={wsConnected}
             />
-
-            {/* Estado de datos detallado */}
 
         </div>
     );
