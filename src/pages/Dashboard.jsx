@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx - CORREGIDO PARA DATOS REALES
+// src/pages/Dashboard.jsx - CORREGIDO PARA DATOS REALES + SHORT POLLING SOLO PARA PASOS
 import { useState, useEffect } from 'react';
 import { DashboardStats } from '../components/organisms/DashboardStats';
 import { Chart } from '../components/molecules/Chart';
@@ -40,6 +40,9 @@ export default function Dashboard() {
     const [temperatureHistory, setTemperatureHistory] = useState([]);
     const [activityHistory, setActivityHistory] = useState([]);
 
+    // ✨ NUEVO: Estado específico para pasos con short polling
+    const [stepsFromPolling, setStepsFromPolling] = useState(null);
+
     // Log para debug
     useEffect(() => {
         console.log('🔍 Debug Dashboard:', {
@@ -51,6 +54,51 @@ export default function Dashboard() {
             summary: getSensorSummary()
         });
     }, [apiConnected, wsConnected, currentValues, wsSensorData, hasValidData, getSensorSummary]);
+
+    // ✨ NUEVO: Short polling exclusivo para pasos
+    useEffect(() => {
+        const fetchSteps = async () => {
+            try {
+                console.log('👟 Short polling para pasos...');
+
+                const token = localStorage.getItem('token');
+                const response = await fetch('https://vivaltest-back.namixcode.cc/mpu', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('📊 Respuesta de /mpu:', result);
+
+                    // Tu amigo ya implementó que en /mpu el campo "pasos" muestra el total
+                    const totalSteps = result.pasos || 0;
+                    console.log('👟 Pasos del short polling:', totalSteps);
+                    setStepsFromPolling(totalSteps);
+                } else {
+                    console.warn('⚠️ Error en short polling de pasos:', response.status);
+                }
+            } catch (error) {
+                console.error('❌ Error en short polling de pasos:', error);
+            }
+        };
+
+        if (apiConnected) {
+            // Ejecutar inmediatamente
+            fetchSteps();
+
+            // Short polling cada 5 segundos solo para pasos
+            const interval = setInterval(fetchSteps, 5000);
+            console.log('🔄 Short polling de pasos iniciado');
+
+            return () => {
+                clearInterval(interval);
+                console.log('⏹️ Short polling de pasos detenido');
+            };
+        }
+    }, [apiConnected]);
 
     // Actualizar gráfica de temperatura con datos de API o WebSocket
     useEffect(() => {
@@ -82,9 +130,11 @@ export default function Dashboard() {
         }
     }, [wsSensorData, currentValues]);
 
-    // Actualizar gráfica de actividad con datos de pasos
+    // ✨ MODIFICADO: Actualizar gráfica de actividad con pasos del short polling
     useEffect(() => {
-        const currentSteps = wsSensorData?.pasos || currentValues?.pasos;
+        // Usar pasos del short polling si están disponibles, sino usar WebSocket/API
+        const currentSteps = stepsFromPolling !== null ? stepsFromPolling :
+            (wsSensorData?.pasos || currentValues?.pasos);
 
         if (currentSteps !== null && currentSteps !== undefined) {
             const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -104,14 +154,14 @@ export default function Dashboard() {
                     // Actualizar el día actual
                     const existingDayIndex = newData.findIndex(d => d.label === currentDay);
                     if (existingDayIndex >= 0) {
-                        newData[existingDayIndex].value += currentSteps;
+                        newData[existingDayIndex].value = currentSteps;
                     }
                 }
 
                 return newData;
             });
         }
-    }, [wsSensorData?.pasos, currentValues?.pasos]);
+    }, [stepsFromPolling, wsSensorData?.pasos, currentValues?.pasos]);
 
     // Inicializar gráficas con datos por defecto si están vacías
     useEffect(() => {
@@ -142,10 +192,10 @@ export default function Dashboard() {
         return isValidNumber(value) ? Number(value).toFixed(decimals) : '--';
     };
 
-    // Combinar datos para estadísticas (priorizar WebSocket sobre API)
+    // ✨ MODIFICADO: Combinar datos para estadísticas (usar pasos del short polling cuando disponible)
     const stats = {
         bodyTemp: wsSensorData?.temperatura_objeto || currentValues?.temperatura_corporal || null,
-        steps: wsSensorData?.pasos || currentValues?.pasos || 0,
+        steps: stepsFromPolling !== null ? stepsFromPolling : (wsSensorData?.pasos || currentValues?.pasos || 0),
         ambientTemp: wsSensorData?.temperatura || currentValues?.temperatura_ambiente || null,
         hydration: (wsSensorData?.conductancia ? wsSensorData.conductancia * 100 : null) ||
             (currentValues?.conductancia ? currentValues.conductancia * 100 : null) ||
@@ -252,7 +302,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Humedad */}
-                    <div className={`rounded-lg p-4 text-center border-2 ${
+                    <div className={`rounded-lng p-4 text-center border-2 ${
                         isValidNumber(wsSensorData?.humedad || currentValues?.humedad_relativa)
                             ? 'bg-green-50 border-green-200'
                             : 'bg-gray-50 border-gray-200'
@@ -283,35 +333,36 @@ export default function Dashboard() {
                         </p>
                     </div>
 
-                    {/* Pasos (MPU6050) */}
+                    {/* ✨ MODIFICADO: Pasos (MPU6050) - Mostrar pasos del short polling */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
-                        isValidNumber(wsSensorData?.pasos || currentValues?.pasos)
+                        isValidNumber(stepsFromPolling !== null ? stepsFromPolling : (wsSensorData?.pasos || currentValues?.pasos))
                             ? 'bg-orange-50 border-orange-200'
                             : 'bg-gray-50 border-gray-200'
                     }`}>
                         <div className="flex items-center justify-center mb-2">
                             <Icon name="activity" size={20} className={`mr-2 ${
-                                isValidNumber(wsSensorData?.pasos || currentValues?.pasos)
+                                isValidNumber(stepsFromPolling !== null ? stepsFromPolling : (wsSensorData?.pasos || currentValues?.pasos))
                                     ? 'text-orange-600' : 'text-gray-400'
                             }`} />
                             <span className={`text-sm font-medium ${
-                                isValidNumber(wsSensorData?.pasos || currentValues?.pasos)
+                                isValidNumber(stepsFromPolling !== null ? stepsFromPolling : (wsSensorData?.pasos || currentValues?.pasos))
                                     ? 'text-orange-800' : 'text-gray-600'
                             }`}>
                                 Pasos
                             </span>
                         </div>
                         <p className={`text-2xl font-bold ${
-                            isValidNumber(wsSensorData?.pasos || currentValues?.pasos)
+                            isValidNumber(stepsFromPolling !== null ? stepsFromPolling : (wsSensorData?.pasos || currentValues?.pasos))
                                 ? 'text-orange-600' : 'text-gray-400'
                         }`}>
-                            {wsSensorData?.pasos || currentValues?.pasos || '--'}
+                            {stepsFromPolling !== null ? stepsFromPolling.toLocaleString() :
+                                (wsSensorData?.pasos || currentValues?.pasos || '--')}
                         </p>
                         <p className={`text-xs mt-1 ${
-                            isValidNumber(wsSensorData?.pasos || currentValues?.pasos)
+                            isValidNumber(stepsFromPolling !== null ? stepsFromPolling : (wsSensorData?.pasos || currentValues?.pasos))
                                 ? 'text-orange-600' : 'text-gray-500'
                         }`}>
-                            MPU6050
+                            MPU6050 {stepsFromPolling !== null ? '(Short Polling)' : ''}
                         </p>
                     </div>
 
@@ -380,6 +431,21 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+                {/* ✨ NUEVO: Información del short polling de pasos */}
+                {stepsFromPolling !== null && (
+                    <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        <div className="flex items-center space-x-2">
+                            <Icon name="activity" size={16} className="text-orange-600" />
+                            <p className="text-sm text-orange-800">
+                                <strong>Pasos obtenidos via Short Polling:</strong> {stepsFromPolling.toLocaleString()}
+                            </p>
+                        </div>
+                        <p className="text-xs text-orange-600 mt-1">
+                            📡 Datos actualizados cada 5 segundos desde /mpu (implementado por tu amigo)
+                        </p>
+                    </div>
+                )}
+
                 {/* Información de último mensaje */}
                 {(lastMessage || lastUpdate) && (
                     <div className="mt-4 p-3 bg-gray-50 rounded-lg">
@@ -394,6 +460,11 @@ export default function Dashboard() {
                         <p className="text-xs text-gray-500 mt-1">
                             Fuente: {wsConnected ? 'WebSocket en tiempo real' : apiConnected ? 'API REST' : 'Sin conexión'}
                         </p>
+                        {stepsFromPolling !== null && (
+                            <p className="text-xs text-gray-500 mt-1">
+                                👟 Pasos: Short Polling independiente cada 5 segundos
+                            </p>
+                        )}
                     </div>
                 )}
             </div>
@@ -403,7 +474,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-lg border border-gray-200">
                     <Chart
                         type="bar"
-                        title="Actividad Semanal (Pasos)"
+                        title={`Actividad Semanal ${stepsFromPolling !== null ? '(Short Polling)' : '(Pasos)'}`}
                         data={activityHistory}
                     />
                 </div>
@@ -461,6 +532,22 @@ export default function Dashboard() {
                         )}
                     </div>
                 </div>
+
+                {/* ✨ NUEVO: Estado del Short Polling para pasos */}
+                {apiConnected && (
+                    <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
+                        <h4 className="font-medium text-yellow-800">👟 Short Polling para Pasos</h4>
+                        <p className="text-sm text-yellow-700 mt-1">
+                            {stepsFromPolling !== null ?
+                                `✅ Activo - Último valor: ${stepsFromPolling.toLocaleString()} pasos` :
+                                '🔄 Iniciando...'}
+                        </p>
+                        <p className="text-xs text-yellow-600 mt-1">
+                            Peticiones independientes a /mpu cada 5 segundos
+                        </p>
+                    </div>
+                )}
+
                 <WebSocketDebugger sensorData={wsSensorData} lastMessage={lastMessage} />
             </div>
         </div>
