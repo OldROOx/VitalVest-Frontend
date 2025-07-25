@@ -1,33 +1,28 @@
-// src/services/websocketService.js - WEBSOCKET DESHABILITADO TEMPORALMENTE
+// src/services/websocketService.js - HABILITADO PARA TU WEBSOCKET
 class WebSocketService {
     constructor() {
         this.ws = null;
-        this.url = 'http://100.28.244.240'; // Tu servidor WebSocket (si está disponible)
+        this.url = 'ws://100.28.244.240:3000/ws'; // Tu servidor WebSocket real
         this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 3; // Reducido para evitar spam
-        this.reconnectInterval = 5000; // Aumentado a 5 segundos
+        this.maxReconnectAttempts = 5;
+        this.reconnectInterval = 3000;
         this.callbacks = {
             onOpen: [],
             onMessage: [],
             onClose: [],
             onError: []
         };
-        this.isEnabled = false; // WEBSOCKET DESHABILITADO POR DEFECTO
+        this.isEnabled = true; // WEBSOCKET HABILITADO
     }
 
     connect() {
-        // WebSocket deshabilitado temporalmente para usar solo API REST
         if (!this.isEnabled) {
-            console.log('📡 WebSocket deshabilitado - usando solo API REST');
-            // Simular conexión fallida para que el hook funcione correctamente
-            setTimeout(() => {
-                this.callbacks.onClose.forEach(callback => callback({ code: 1000, reason: 'WebSocket deshabilitado' }));
-            }, 100);
+            console.log('📡 WebSocket deshabilitado');
             return;
         }
 
         try {
-            console.log('🔌 Intentando conectar al WebSocket:', this.url);
+            console.log('🔌 Conectando al WebSocket:', this.url);
             this.ws = new WebSocket(this.url);
 
             this.ws.onopen = (event) => {
@@ -41,6 +36,7 @@ class WebSocketService {
                     const data = JSON.parse(event.data);
                     console.log('📦 Mensaje recibido por WebSocket:', data);
 
+                    // Procesar datos según tu estructura de WebSocket
                     if (data && typeof data === 'object') {
                         this.callbacks.onMessage.forEach(callback => callback(data));
                     } else {
@@ -56,7 +52,7 @@ class WebSocketService {
                 console.log('🔌 WebSocket desconectado. Código:', event.code, 'Razón:', event.reason);
                 this.callbacks.onClose.forEach(callback => callback(event));
 
-                // Intentar reconexión automática solo si está habilitado
+                // Intentar reconexión automática
                 if (this.isEnabled && event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.reconnectAttempts++;
                     console.log(`🔄 Intentando reconectar WebSocket... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
@@ -123,7 +119,7 @@ class WebSocketService {
             console.log('📤 Enviando datos por WebSocket:', jsonData);
             this.ws.send(jsonData);
         } else {
-            console.warn('⚠️ WebSocket no está conectado o está deshabilitado');
+            console.warn('⚠️ WebSocket no está conectado');
         }
     }
 

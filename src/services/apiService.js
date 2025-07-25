@@ -1,4 +1,4 @@
-// src/services/apiService.js - CONFIGURADO PARA TU BACKEND
+// src/services/apiService.js - CORREGIDO PARA TU BACKEND
 const API_BASE_URL = 'https://vivaltest-back.namixcode.cc';
 
 class ApiService {
@@ -24,6 +24,20 @@ class ApiService {
 
     onConnection(callback) {
         this.callbacks.onConnection.push(callback);
+    }
+
+    // Obtener token de autorización
+    getAuthHeaders() {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        return headers;
     }
 
     // Iniciar polling automático
@@ -52,11 +66,13 @@ class ApiService {
         console.log('⏹️ Polling de API detenido');
     }
 
-    // Obtener todos los datos - ADAPTADO A TU ESTRUCTURA
+    // Obtener todos los datos
     async fetchAllData() {
         try {
-            const sensorData = await this.getAllSensorData();
-            const users = await this.getUsers();
+            const [sensorData, users] = await Promise.all([
+                this.getAllSensorData(),
+                this.getUsers()
+            ]);
 
             if (sensorData) {
                 const transformedData = this.transformSensorData(sensorData);
@@ -85,7 +101,7 @@ class ApiService {
     // Obtener datos de todos los sensores
     async getAllSensorData() {
         try {
-            const [bmeData, gsrData, mlxData, mpuData] = await Promise.all([
+            const [bmeData, gsrData, mlxData, mpuData] = await Promise.allSettled([
                 this.getBMEData(),
                 this.getGSRData(),
                 this.getMLXData(),
@@ -93,10 +109,10 @@ class ApiService {
             ]);
 
             return {
-                BME: bmeData,
-                GSR: gsrData,
-                MLX: mlxData,
-                MPU: mpuData
+                BME: bmeData.status === 'fulfilled' ? bmeData.value : [],
+                GSR: gsrData.status === 'fulfilled' ? gsrData.value : [],
+                MLX: mlxData.status === 'fulfilled' ? mlxData.value : [],
+                MPU: mpuData.status === 'fulfilled' ? mpuData.value : []
             };
         } catch (error) {
             console.error('Error obteniendo datos de sensores:', error);
@@ -104,22 +120,23 @@ class ApiService {
         }
     }
 
-    // BME280 - Con autenticación
+    // BME280
     async getBMEData() {
         try {
-            const token = localStorage.getItem('token');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
+            const response = await fetch(`${API_BASE_URL}/bme`, {
+                headers: this.getAuthHeaders()
+            });
 
-            // Solo agregar Authorization si tenemos token
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.warn('Token expirado para BME, usando datos vacíos');
+                    return [];
+                }
+                throw new Error(`BME HTTP ${response.status}`);
             }
 
-            const response = await fetch(`${API_BASE_URL}/bme`, { headers });
-            if (!response.ok) throw new Error(`BME HTTP ${response.status}`);
             const result = await response.json();
+            console.log('📊 Datos BME recibidos:', result);
             return result.BME || [];
         } catch (error) {
             console.error('Error obteniendo datos BME:', error);
@@ -127,21 +144,23 @@ class ApiService {
         }
     }
 
-    // GSR - Con autenticación
+    // GSR
     async getGSRData() {
         try {
-            const token = localStorage.getItem('token');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
+            const response = await fetch(`${API_BASE_URL}/gsr`, {
+                headers: this.getAuthHeaders()
+            });
 
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.warn('Token expirado para GSR, usando datos vacíos');
+                    return [];
+                }
+                throw new Error(`GSR HTTP ${response.status}`);
             }
 
-            const response = await fetch(`${API_BASE_URL}/gsr`, { headers });
-            if (!response.ok) throw new Error(`GSR HTTP ${response.status}`);
             const result = await response.json();
+            console.log('📊 Datos GSR recibidos:', result);
             return result.GSR || [];
         } catch (error) {
             console.error('Error obteniendo datos GSR:', error);
@@ -149,21 +168,23 @@ class ApiService {
         }
     }
 
-    // MLX90614 - Con autenticación
+    // MLX90614
     async getMLXData() {
         try {
-            const token = localStorage.getItem('token');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
+            const response = await fetch(`${API_BASE_URL}/mlx`, {
+                headers: this.getAuthHeaders()
+            });
 
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.warn('Token expirado para MLX, usando datos vacíos');
+                    return [];
+                }
+                throw new Error(`MLX HTTP ${response.status}`);
             }
 
-            const response = await fetch(`${API_BASE_URL}/mlx`, { headers });
-            if (!response.ok) throw new Error(`MLX HTTP ${response.status}`);
             const result = await response.json();
+            console.log('📊 Datos MLX recibidos:', result);
             return result.MLX || [];
         } catch (error) {
             console.error('Error obteniendo datos MLX:', error);
@@ -171,21 +192,23 @@ class ApiService {
         }
     }
 
-    // MPU6050 - Con autenticación
+    // MPU6050
     async getMPUData() {
         try {
-            const token = localStorage.getItem('token');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
+            const response = await fetch(`${API_BASE_URL}/mpu`, {
+                headers: this.getAuthHeaders()
+            });
 
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.warn('Token expirado para MPU, usando datos vacíos');
+                    return [];
+                }
+                throw new Error(`MPU HTTP ${response.status}`);
             }
 
-            const response = await fetch(`${API_BASE_URL}/mpu`, { headers });
-            if (!response.ok) throw new Error(`MPU HTTP ${response.status}`);
             const result = await response.json();
+            console.log('📊 Datos MPU recibidos:', result);
             return result.MPU || [];
         } catch (error) {
             console.error('Error obteniendo datos MPU:', error);
@@ -193,21 +216,23 @@ class ApiService {
         }
     }
 
-    // Usuarios - Con autenticación
+    // Usuarios
     async getUsers() {
         try {
-            const token = localStorage.getItem('token');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
+            const response = await fetch(`${API_BASE_URL}/users`, {
+                headers: this.getAuthHeaders()
+            });
 
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.warn('Token expirado para Users, usando datos vacíos');
+                    return [];
+                }
+                throw new Error(`Users HTTP ${response.status}`);
             }
 
-            const response = await fetch(`${API_BASE_URL}/users`, { headers });
-            if (!response.ok) throw new Error(`Users HTTP ${response.status}`);
             const users = await response.json();
+            console.log('👥 Usuarios recibidos:', users);
             return users || [];
         } catch (error) {
             console.error('Error obteniendo usuarios:', error);
@@ -219,26 +244,35 @@ class ApiService {
     transformSensorData(sensorData) {
         const { BME, GSR, MLX, MPU } = sensorData;
 
+        // Obtener el último valor de cada sensor
         const latestBME = BME && BME.length > 0 ? BME[BME.length - 1] : null;
         const latestGSR = GSR && GSR.length > 0 ? GSR[GSR.length - 1] : null;
         const latestMLX = MLX && MLX.length > 0 ? MLX[MLX.length - 1] : null;
         const latestMPU = MPU && MPU.length > 0 ? MPU[MPU.length - 1] : null;
 
+        console.log('🔄 Transformando datos:', {
+            latestBME,
+            latestGSR,
+            latestMLX,
+            latestMPU
+        });
+
         return {
             current: {
-                // BME280 - temperatura, humedad, presion
+                // BME280 - AJUSTADO A TU ESTRUCTURA DE BASE DE DATOS
                 temperatura_ambiente: latestBME?.temperatura || null,
                 humedad_relativa: latestBME?.humedad || null,
                 presion: latestBME?.presion || null,
 
-                // GSR - conductancia, estado_hidratacion
+                // GSR - AJUSTADO A TU ESTRUCTURA
                 conductancia: latestGSR?.conductancia || null,
                 estado_hidratacion: latestGSR?.estado_hidratacion || null,
 
-                // MLX90614 - temperatura_objeto
+                // MLX90614 - AJUSTADO A TU ESTRUCTURA
                 temperatura_corporal: latestMLX?.temperatura_objeto || null,
+                temperatura_ambiente_mlx: latestMLX?.temperatura_ambiente || null,
 
-                // MPU6050 - pasos, fecha
+                // MPU6050 - AJUSTADO A TU ESTRUCTURA
                 pasos: latestMPU?.pasos || null,
                 fecha_actividad: latestMPU?.fecha || null
             },
@@ -256,16 +290,20 @@ class ApiService {
     calculateStats(sensorData) {
         const { BME, GSR, MLX, MPU } = sensorData;
 
+        // Estadísticas de temperatura corporal
         const mlxTemps = MLX?.map(d => d.temperatura_objeto).filter(t => t != null) || [];
         const avgBodyTemp = mlxTemps.length > 0 ?
             mlxTemps.reduce((a, b) => a + b, 0) / mlxTemps.length : null;
 
+        // Estadísticas de pasos
         const totalSteps = MPU?.reduce((total, d) => total + (d.pasos || 0), 0) || 0;
 
+        // Estadísticas de temperatura ambiente
         const bmeTemps = BME?.map(d => d.temperatura).filter(t => t != null) || [];
         const avgAmbientTemp = bmeTemps.length > 0 ?
             bmeTemps.reduce((a, b) => a + b, 0) / bmeTemps.length : null;
 
+        // Estadísticas de hidratación/conductancia
         const gsrValues = GSR?.map(d => d.conductancia).filter(c => c != null) || [];
         const avgHydration = gsrValues.length > 0 ?
             (gsrValues.reduce((a, b) => a + b, 0) / gsrValues.length) * 100 : null;
@@ -295,22 +333,19 @@ class ApiService {
         };
     }
 
-    // Crear nuevos registros - CON AUTENTICACIÓN
+    // Crear nuevos registros
     async createBME(data) {
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/bme`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify({
                     temperatura: data.temperatura,
                     humedad: data.humedad,
                     presion: data.presion
                 })
             });
+
             if (!response.ok) throw new Error(`Error creando BME: ${response.status}`);
             return await response.json();
         } catch (error) {
@@ -321,18 +356,15 @@ class ApiService {
 
     async createGSR(data) {
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/gsr`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify({
                     conductancia: data.conductancia,
                     estado_hidratacion: data.estado_hidratacion
                 })
             });
+
             if (!response.ok) throw new Error(`Error creando GSR: ${response.status}`);
             return await response.json();
         } catch (error) {
@@ -343,18 +375,15 @@ class ApiService {
 
     async createMLX(data) {
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/mlx`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify({
                     temperatura_ambiente: data.temperatura_ambiente,
                     temperatura_objeto: data.temperatura_objeto
                 })
             });
+
             if (!response.ok) throw new Error(`Error creando MLX: ${response.status}`);
             return await response.json();
         } catch (error) {
@@ -365,17 +394,14 @@ class ApiService {
 
     async createMPU(data) {
         try {
-            const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/mpu`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify({
                     pasos: data.pasos
                 })
             });
+
             if (!response.ok) throw new Error(`Error creando MPU: ${response.status}`);
             return await response.json();
         } catch (error) {

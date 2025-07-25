@@ -1,4 +1,4 @@
-// src/services/authService.js - CONFIGURADO PARA TU BACKEND CON JWT
+// src/services/authService.js - CORREGIDO PARA TU BACKEND
 const API_BASE_URL = 'https://vivaltest-back.namixcode.cc';
 
 export const authService = {
@@ -13,7 +13,7 @@ export const authService = {
                 },
                 body: JSON.stringify({
                     username: credentials.email,
-                    passwords: credentials.password  // Tu backend usa "passwords" no "password"
+                    passwords: credentials.password
                 })
             });
 
@@ -29,7 +29,6 @@ export const authService = {
 
             // Tu backend devuelve: { "token": "jwt_token", "user": {...} }
             if (data && data.token && data.user) {
-                // Guardar token JWT y datos del usuario
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
                 localStorage.setItem('isAuthenticated', 'true');
@@ -40,24 +39,6 @@ export const authService = {
                     success: true,
                     user: data.user,
                     token: data.token
-                };
-            } else if (Array.isArray(data) && data.length > 0) {
-                // Si tu backend devuelve un array como el código Go que veo
-                const userData = data[0];
-
-                // Simular token ya que tu backend actual no parece devolverlo
-                const fakeToken = btoa(JSON.stringify({ user: userData.username, exp: Date.now() + 86400000 }));
-
-                localStorage.setItem('token', fakeToken);
-                localStorage.setItem('user', JSON.stringify(userData));
-                localStorage.setItem('isAuthenticated', 'true');
-
-                console.log('💾 Usuario guardado en localStorage (sin JWT real)');
-
-                return {
-                    success: true,
-                    user: userData,
-                    token: fakeToken
                 };
             } else {
                 throw new Error('Respuesta del servidor inválida');
@@ -88,39 +69,10 @@ export const authService = {
     isAuthenticated() {
         const isAuth = localStorage.getItem('isAuthenticated') === 'true';
         const token = localStorage.getItem('token');
-
-        // Verificar que tenemos tanto la flag como el token
         return isAuth && token !== null;
     },
 
     getToken() {
         return localStorage.getItem('token');
-    },
-
-    // Verificar si el token está expirado (opcional)
-    isTokenExpired() {
-        const token = this.getToken();
-        if (!token) return true;
-
-        try {
-            // Decodificar JWT básico (sin librerías)
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const currentTime = Date.now() / 1000;
-
-            return payload.exp < currentTime;
-        } catch (error) {
-            console.error('Error verificando expiración del token:', error);
-            return true;
-        }
-    },
-
-    // Renovar token automáticamente si es necesario
-    async refreshTokenIfNeeded() {
-        if (this.isTokenExpired()) {
-            console.log('🔄 Token expirado, cerrando sesión...');
-            this.logout();
-            return false;
-        }
-        return true;
     }
 };

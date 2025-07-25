@@ -1,9 +1,10 @@
-// src/pages/Configuration.jsx - CORREGIDO PARA TU BACKEND
+// src/pages/Configuration.jsx - CORREGIDO PARA DATOS REALES
 import { useState } from 'react'
 import { Button } from '../components/atoms/Button'
 import { FormField } from '../components/molecules/FormField'
 import { SensorPanel } from '../components/organisms/SensorPanel'
 import { useApi } from '../hooks/useApi'
+import { useWebSocket } from '../hooks/useWebSocket'
 import { Badge } from '../components/atoms/Badge'
 import { Icon } from '../components/atoms/Icon'
 
@@ -12,7 +13,7 @@ export default function Configuration() {
     const [connectionMode, setConnectionMode] = useState('online')
 
     const {
-        isConnected,
+        isConnected: apiConnected,
         currentValues,
         users,
         startPolling,
@@ -22,41 +23,48 @@ export default function Configuration() {
         pollingInterval: 3000
     });
 
-    // Configuración de sensores basada en tu estructura de API
+    const {
+        isConnected: wsConnected,
+        sensorData: wsSensorData,
+        reconnect: wsReconnect,
+        getConnectionStats
+    } = useWebSocket();
+
+    // Configuración de sensores basada en datos reales
     const sensors = [
         {
             id: 1,
             name: 'Sensor BME280 (Ambiente)',
-            status: currentValues?.temperatura_ambiente !== null ? 'Activo' : 'Inactivo',
-            lastReading: currentValues?.temperatura_ambiente ?
-                `${currentValues.temperatura_ambiente.toFixed(1)}°C, ${currentValues.humedad_relativa?.toFixed(1)}%` :
+            status: (wsSensorData?.temperatura !== null || currentValues?.temperatura_ambiente !== null) ? 'Activo' : 'Inactivo',
+            lastReading: (wsSensorData?.temperatura || currentValues?.temperatura_ambiente) ?
+                `${(wsSensorData?.temperatura || currentValues?.temperatura_ambiente)?.toFixed(1)}°C, ${(wsSensorData?.humedad || currentValues?.humedad_relativa)?.toFixed(1) || '--'}%` :
                 'Sin datos',
             icon: 'thermometer'
         },
         {
             id: 2,
             name: 'Sensor GSR (Hidratación)',
-            status: currentValues?.conductancia !== null ? 'Activo' : 'Inactivo',
-            lastReading: currentValues?.conductancia ?
-                `${currentValues.conductancia.toFixed(3)} - ${currentValues.estado_hidratacion}` :
+            status: (wsSensorData?.conductancia !== null || currentValues?.conductancia !== null) ? 'Activo' : 'Inactivo',
+            lastReading: (wsSensorData?.conductancia || currentValues?.conductancia) ?
+                `${(wsSensorData?.conductancia || currentValues?.conductancia)?.toFixed(3)} - ${wsSensorData?.estado_hidratacion || currentValues?.estado_hidratacion || 'Estado unknown'}` :
                 'Sin datos',
             icon: 'droplet'
         },
         {
             id: 3,
             name: 'Sensor MLX90614 (Corporal)',
-            status: currentValues?.temperatura_corporal !== null ? 'Activo' : 'Inactivo',
-            lastReading: currentValues?.temperatura_corporal ?
-                `${currentValues.temperatura_corporal.toFixed(1)}°C` :
+            status: (wsSensorData?.temperatura_objeto !== null || currentValues?.temperatura_corporal !== null) ? 'Activo' : 'Inactivo',
+            lastReading: (wsSensorData?.temperatura_objeto || currentValues?.temperatura_corporal) ?
+                `${(wsSensorData?.temperatura_objeto || currentValues?.temperatura_corporal)?.toFixed(1)}°C` :
                 'Sin datos',
             icon: 'heart'
         },
         {
             id: 4,
             name: 'Sensor MPU6050 (Pasos)',
-            status: currentValues?.pasos !== null ? 'Activo' : 'Inactivo',
-            lastReading: currentValues?.pasos !== null ?
-                `${currentValues.pasos} pasos` :
+            status: (wsSensorData?.pasos !== null || currentValues?.pasos !== null) ? 'Activo' : 'Inactivo',
+            lastReading: (wsSensorData?.pasos !== null || currentValues?.pasos !== null) ?
+                `${wsSensorData?.pasos || currentValues?.pasos || 0} pasos` :
                 'Sin datos',
             icon: 'activity'
         }
@@ -78,6 +86,15 @@ export default function Configuration() {
         alert(`Modo ${mode === 'online' ? 'Online' : 'Offline'} activado`)
     }
 
+    const handleWebSocketReconnect = () => {
+        wsReconnect()
+        alert('Intentando reconectar WebSocket...')
+    }
+
+    // Verificar si hay datos válidos
+    const hasValidApiData = currentValues && Object.keys(currentValues).some(key => currentValues[key] !== null);
+    const hasValidWsData = wsSensorData && Object.keys(wsSensorData).some(key => wsSensorData[key] !== null);
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -85,27 +102,60 @@ export default function Configuration() {
                 <p className="text-sm text-gray-500">Gestión de usuarios, sensores y conectividad</p>
             </div>
 
-            {/* API Status and Control */}
+            {/* Estado de Conexiones */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     <Icon name="activity" size={20} className="inline mr-2" />
-                    Estado de la API
+                    Estado de Conexiones
                 </h3>
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} ${isConnected ? 'animate-pulse' : ''}`}></div>
-                        <div>
-                            <h4 className="font-medium text-gray-900">
-                                API VitalVest - {isConnected ? 'Conectada' : 'Desconectada'}
-                            </h4>
-                            <p className="text-sm text-gray-500">
-                                Endpoint: localhost:8080 • {isConnected ? 'Obteniendo datos' : 'Sin conexión'}
-                            </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* API Status */}
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${apiConnected ? 'bg-green-500' : 'bg-red-500'} ${apiConnected ? 'animate-pulse' : ''}`}></div>
+                            <div>
+                                <h4 className="font-medium text-gray-900">
+                                    API VitalVest - {apiConnected ? 'Conectada' : 'Desconectada'}
+                                </h4>
+                                <p className="text-sm text-gray-500">
+                                    Endpoint: vivaltest-back.namixcode.cc • {apiConnected ? 'Obteniendo datos' : 'Sin conexión'}
+                                </p>
+                            </div>
+                        </div>
+                        <Badge variant={apiConnected ? 'success' : 'danger'} size="sm">
+                            {apiConnected ? 'Online' : 'Offline'}
+                        </Badge>
+                    </div>
+
+                    {/* WebSocket Status */}
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-red-500'} ${wsConnected ? 'animate-pulse' : ''}`}></div>
+                            <div>
+                                <h4 className="font-medium text-gray-900">
+                                    WebSocket - {wsConnected ? 'Conectado' : 'Desconectado'}
+                                </h4>
+                                <p className="text-sm text-gray-500">
+                                    Endpoint: 100.28.244.240:3000 • {wsConnected ? 'Tiempo real' : 'Sin conexión'}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Badge variant={wsConnected ? 'success' : 'danger'} size="sm">
+                                {wsConnected ? 'Online' : 'Offline'}
+                            </Badge>
+                            {!wsConnected && (
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={handleWebSocketReconnect}
+                                >
+                                    Reconectar
+                                </Button>
+                            )}
                         </div>
                     </div>
-                    <Badge variant={isConnected ? 'success' : 'danger'} size="sm">
-                        {isConnected ? 'Online' : 'Offline'}
-                    </Badge>
                 </div>
             </div>
 
@@ -134,11 +184,7 @@ export default function Configuration() {
                                         </option>
                                     ))
                                 ) : (
-                                    <>
-                                        <option value="admin">admin (Por defecto)</option>
-                                        <option value="juan">juan (Por defecto)</option>
-                                        <option value="maria">maria (Por defecto)</option>
-                                    </>
+                                    <option value="" disabled>No hay usuarios disponibles</option>
                                 )}
                             </select>
                         </FormField>
@@ -155,10 +201,16 @@ export default function Configuration() {
                     </div>
                 </div>
 
-                {users && users.length > 0 && (
+                {users && users.length > 0 ? (
                     <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p className="text-blue-800 text-sm">
                             📊 Se encontraron {users.length} usuarios en la base de datos
+                        </p>
+                    </div>
+                ) : (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-yellow-800 text-sm">
+                            ⚠️ No se pudieron cargar los usuarios. Verifica la conexión con la API.
                         </p>
                     </div>
                 )}
@@ -178,7 +230,7 @@ export default function Configuration() {
                             <Icon name="wifi" size={20} className="text-green-600" />
                             <div>
                                 <h4 className="font-medium text-gray-900">Modo Online</h4>
-                                <p className="text-sm text-gray-500">Conexión continua con API y base de datos</p>
+                                <p className="text-sm text-gray-500">Conexión continua con API y WebSocket</p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -205,7 +257,7 @@ export default function Configuration() {
                             <Icon name="wifi" size={20} className="text-gray-400" />
                             <div>
                                 <h4 className="font-medium text-gray-900">Modo Offline</h4>
-                                <p className="text-sm text-gray-500">Solo almacenamiento local, sin conexión API</p>
+                                <p className="text-sm text-gray-500">Solo almacenamiento local, sin conexión</p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -244,7 +296,7 @@ export default function Configuration() {
                                     connectionMode === 'online' ? 'text-green-700' : 'text-yellow-700'
                                 }`}>
                                     {connectionMode === 'online'
-                                        ? 'Los datos se obtienen directamente de la API y base de datos MySQL'
+                                        ? 'Los datos se obtienen de la API REST y WebSocket en tiempo real'
                                         : 'Modo sin conexión activo. Los datos no se actualizarán automáticamente.'
                                     }
                                 </p>
@@ -257,68 +309,77 @@ export default function Configuration() {
             {/* Sensor Status */}
             <SensorPanel sensors={sensors} />
 
-            {/* Real-time Sensor Data Preview - ADAPTADO A TU ESTRUCTURA */}
-            {isConnected && currentValues && Object.keys(currentValues).some(key => currentValues[key] !== null) && (
+            {/* Real-time Sensor Data Preview */}
+            {(hasValidApiData || hasValidWsData) && (
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                        Vista Previa de Datos en Tiempo Real (API)
+                        Vista Previa de Datos en Tiempo Real
                     </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                        Fuente: {wsConnected ? 'WebSocket (tiempo real)' : apiConnected ? 'API REST' : 'Sin conexión'}
+                    </p>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* BME280 */}
-                        {(currentValues.temperatura_ambiente !== null || currentValues.humedad_relativa !== null) && (
+                        {((wsSensorData?.temperatura !== null || wsSensorData?.humedad !== null) ||
+                            (currentValues?.temperatura_ambiente !== null || currentValues?.humedad_relativa !== null)) && (
                             <div className="bg-blue-50 p-4 rounded-lg">
-                                <h4 className="font-medium text-blue-900">BME280</h4>
+                                <h4 className="font-medium text-blue-900">BME280 (Ambiente)</h4>
                                 <div className="space-y-1 mt-2">
                                     <p className="text-sm text-blue-700">
-                                        Temp: {currentValues.temperatura_ambiente?.toFixed(1) || '--'}°C
+                                        Temp: {(wsSensorData?.temperatura || currentValues?.temperatura_ambiente)?.toFixed(1) || '--'}°C
                                     </p>
                                     <p className="text-sm text-blue-700">
-                                        Humedad: {currentValues.humedad_relativa?.toFixed(1) || '--'}%
+                                        Humedad: {(wsSensorData?.humedad || currentValues?.humedad_relativa)?.toFixed(1) || '--'}%
                                     </p>
                                     <p className="text-sm text-blue-700">
-                                        Presión: {currentValues.presion?.toFixed(0) || '--'} hPa
+                                        Presión: {(wsSensorData?.presion || currentValues?.presion)?.toFixed(0) || '--'} hPa
                                     </p>
                                 </div>
                             </div>
                         )}
 
                         {/* GSR */}
-                        {(currentValues.conductancia !== null || currentValues.estado_hidratacion) && (
+                        {((wsSensorData?.conductancia !== null || wsSensorData?.estado_hidratacion) ||
+                            (currentValues?.conductancia !== null || currentValues?.estado_hidratacion)) && (
                             <div className="bg-green-50 p-4 rounded-lg">
-                                <h4 className="font-medium text-green-900">GSR</h4>
+                                <h4 className="font-medium text-green-900">GSR (Hidratación)</h4>
                                 <div className="space-y-1 mt-2">
                                     <p className="text-sm text-green-700">
-                                        Conductancia: {currentValues.conductancia?.toFixed(3) || '--'}
+                                        Conductancia: {(wsSensorData?.conductancia || currentValues?.conductancia)?.toFixed(3) || '--'}
                                     </p>
                                     <p className="text-sm text-green-700">
-                                        Estado: {currentValues.estado_hidratacion || '--'}
+                                        Estado: {wsSensorData?.estado_hidratacion || currentValues?.estado_hidratacion || '--'}
                                     </p>
                                 </div>
                             </div>
                         )}
 
                         {/* MLX90614 */}
-                        {currentValues.temperatura_corporal !== null && (
+                        {((wsSensorData?.temperatura_objeto !== null) || (currentValues?.temperatura_corporal !== null)) && (
                             <div className="bg-red-50 p-4 rounded-lg">
-                                <h4 className="font-medium text-red-900">MLX90614</h4>
+                                <h4 className="font-medium text-red-900">MLX90614 (Corporal)</h4>
                                 <div className="space-y-1 mt-2">
                                     <p className="text-sm text-red-700">
-                                        Temp Corporal: {currentValues.temperatura_corporal?.toFixed(1) || '--'}°C
+                                        Temp Corporal: {(wsSensorData?.temperatura_objeto || currentValues?.temperatura_corporal)?.toFixed(1) || '--'}°C
+                                    </p>
+                                    <p className="text-sm text-red-700">
+                                        Temp Ambiente: {(wsSensorData?.temperatura_ambiente || currentValues?.temperatura_ambiente_mlx)?.toFixed(1) || '--'}°C
                                     </p>
                                 </div>
                             </div>
                         )}
 
                         {/* MPU6050 */}
-                        {currentValues.pasos !== null && (
+                        {((wsSensorData?.pasos !== null) || (currentValues?.pasos !== null)) && (
                             <div className="bg-purple-50 p-4 rounded-lg">
-                                <h4 className="font-medium text-purple-900">MPU6050</h4>
+                                <h4 className="font-medium text-purple-900">MPU6050 (Actividad)</h4>
                                 <div className="space-y-1 mt-2">
                                     <p className="text-sm text-purple-700">
-                                        Pasos: {currentValues.pasos || '--'}
+                                        Pasos: {wsSensorData?.pasos || currentValues?.pasos || '--'}
                                     </p>
                                     <p className="text-sm text-purple-700">
-                                        Fecha: {currentValues.fecha_actividad || '--'}
+                                        Fecha: {currentValues?.fecha_actividad || 'Tiempo real'}
                                     </p>
                                 </div>
                             </div>
@@ -337,10 +398,17 @@ export default function Configuration() {
                     <div>
                         <h4 className="font-medium text-gray-700 mb-2">Frecuencia de Muestreo</h4>
                         <FormField label="Intervalo de lectura (segundos)">
-                            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onChange={(e) => {
+                                    const interval = parseInt(e.target.value) * 1000;
+                                    stopPolling();
+                                    startPolling(interval);
+                                }}
+                            >
                                 <option value="1">1 segundo</option>
                                 <option value="2">2 segundos</option>
-                                <option value="3" selected>3 segundos</option>
+                                <option value="3" defaultValue>3 segundos</option>
                                 <option value="5">5 segundos</option>
                                 <option value="10">10 segundos</option>
                             </select>
@@ -365,6 +433,35 @@ export default function Configuration() {
                     </div>
                 </div>
             </div>
+
+            {/* Estadísticas de conexión */}
+            {wsConnected && (
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Estadísticas de WebSocket
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                            <p className="text-lg font-semibold text-green-600">
+                                {getConnectionStats().reconnectAttempts}
+                            </p>
+                            <p className="text-xs text-green-800">Intentos de reconexión</p>
+                        </div>
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                            <p className="text-lg font-semibold text-blue-600">
+                                {getConnectionStats().state}
+                            </p>
+                            <p className="text-xs text-blue-800">Estado de conexión</p>
+                        </div>
+                        <div className="text-center p-3 bg-indigo-50 rounded-lg">
+                            <p className="text-lg font-semibold text-indigo-600">
+                                {getConnectionStats().url.split('//')[1]}
+                            </p>
+                            <p className="text-xs text-indigo-800">Servidor</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
