@@ -23,13 +23,7 @@ export const DashboardStats = ({ stats }) => {
                 icon="thermometer"
                 status="normal"
             />
-            <MetricCard
-                title="Hidratación"
-                value={Math.round(stats.hydration) || '--'}
-                unit="%"
-                icon="droplet"
-                status={stats.hydration < 60 ? 'warning' : 'normal'}
-            />
+
         </div>
     )
 }
