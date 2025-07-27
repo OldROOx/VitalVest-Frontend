@@ -6,7 +6,6 @@ import { useApi } from '../hooks/useApi';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { Badge } from '../components/atoms/Badge';
 import { Icon } from '../components/atoms/Icon';
-import {WebSocketDebugger} from "./WebSocketDebugger.jsx";
 import { BodyTemperatureChart } from '../components/molecules/BodyTemperatureChart';
 import {GyroscopeRingChart} from "../components/molecules/GyroscopeRingChart.jsx";
 
@@ -552,9 +551,9 @@ export default function Dashboard() {
                 <GyroscopeRingChart
                     data={wsSensorData}
                     isConnected={wsConnected}
-                />
+                />z
 
-                <WebSocketDebugger sensorData={wsSensorData} lastMessage={lastMessage} />
+
             </div>
         </div>
     );
