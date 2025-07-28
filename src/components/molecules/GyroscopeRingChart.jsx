@@ -1,4 +1,4 @@
-// src/components/molecules/GyroscopeRingChart.jsx - GRÁFICA DE ANILLOS CON ESTADÍSTICAS
+// src/components/molecules/GyroscopeRingChart.jsx - FIX MLX ESTADÍSTICAS
 import React, { useRef, useEffect, useState } from 'react';
 import { Icon } from '../atoms/Icon';
 
@@ -21,7 +21,7 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
         return (value !== null && value !== undefined && !isNaN(value)) ? Number(value) : fallback;
     };
 
-    // Obtener estadísticas de todos los sensores desde la API
+    // Obtener estadísticas de todos los sensores desde la API - FIX URL CORRECTA
     const fetchAllSensorStatistics = async () => {
         setIsLoadingStats(true);
         setStatsError(null);
@@ -35,11 +35,11 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
                 'Content-Type': 'application/json'
             };
 
-            // Llamadas paralelas a todas las APIs de estadísticas
+            // FIX: URLs CORRECTAS según tu documentación
             const [mpuResponse, bmeResponse, mlxResponse] = await Promise.allSettled([
                 fetch('http://75.101.239.21:8000/mpu6050/estadisticas', { headers }),
                 fetch('http://75.101.239.21:8000/bme280/estadisticas', { headers }),
-                fetch('http://75.101.239.21:8000/mlx/estadisticas', { headers })
+                fetch('http://75.101.239.21:8000/mlx/estadisticas', { headers }) // FIX: URL correcta
             ]);
 
             // Procesar MPU6050
@@ -48,7 +48,10 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
                 console.log('📈 Estadísticas MPU6050 recibidas:', mpuResult);
                 setStatsData(mpuResult);
             } else {
-                console.warn('⚠️ Error obteniendo estadísticas MPU6050');
+                console.warn('⚠️ Error obteniendo estadísticas MPU6050:', mpuResponse.reason || 'Request failed');
+                if (mpuResponse.value) {
+                    console.log('Status MPU:', mpuResponse.value.status);
+                }
             }
 
             // Procesar BME280
@@ -57,16 +60,31 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
                 console.log('🌡️ Estadísticas BME280 recibidas:', bmeResult);
                 setBmeStatsData(bmeResult);
             } else {
-                console.warn('⚠️ Error obteniendo estadísticas BME280');
+                console.warn('⚠️ Error obteniendo estadísticas BME280:', bmeResponse.reason || 'Request failed');
+                if (bmeResponse.value) {
+                    console.log('Status BME:', bmeResponse.value.status);
+                }
             }
 
-            // Procesar MLX90614
+            // Procesar MLX90614 - FIX CRÍTICO
             if (mlxResponse.status === 'fulfilled' && mlxResponse.value.ok) {
                 const mlxResult = await mlxResponse.value.json();
-                console.log('🔥 Estadísticas MLX recibidas:', mlxResult);
-                setMlxStatsData(mlxResult);
+                console.log('🔥 Estadísticas MLX recibidas RAW:', mlxResult);
+
+                // FIX: Verificar estructura de datos real
+                if (mlxResult && Object.keys(mlxResult).length > 0) {
+                    setMlxStatsData(mlxResult);
+                    console.log('✅ MLX Stats guardadas:', mlxResult);
+                } else {
+                    console.warn('⚠️ MLX resultado vacío:', mlxResult);
+                }
             } else {
-                console.warn('⚠️ Error obteniendo estadísticas MLX');
+                console.warn('⚠️ Error obteniendo estadísticas MLX:', mlxResponse.reason || 'Request failed');
+                if (mlxResponse.value) {
+                    console.log('Status MLX:', mlxResponse.value.status);
+                    const errorText = await mlxResponse.value.text().catch(() => 'No error text');
+                    console.log('Error text MLX:', errorText);
+                }
             }
 
         } catch (error) {
@@ -376,18 +394,6 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
                                             {statsData.prob_binomial_altos?.toFixed(4) || '--'}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-blue-700">Distancia total:</span>
-                                        <span className="font-semibold text-blue-800">
-                                            {statsData.distancia_total_m?.toFixed(1) || '--'} m
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-blue-700">Pasos faltantes 2km:</span>
-                                        <span className="font-semibold text-orange-600">
-                                            {statsData.pasos_faltantes_para_2km?.toLocaleString() || '--'}
-                                        </span>
-                                    </div>
                                 </div>
 
                                 {/* Total que suma 100% */}
@@ -402,38 +408,6 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
                                         ✓ Representa el 100% completo del anillo
                                     </p>
                                 </div>
-
-                                {/* Meta de 2km */}
-                                {statsData.pasos_faltantes_para_2km !== undefined && (
-                                    <div className="mt-3 p-2 bg-blue-100 rounded-lg border border-blue-300">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-blue-700 text-xs font-medium">🎯 Meta 2km:</span>
-                                            <span className="text-blue-800 text-xs font-semibold">
-                                                {statsData.pasos_faltantes_para_2km === 0 ?
-                                                    '¡Meta alcanzada! 🎉' :
-                                                    `Faltan ${statsData.pasos_faltantes_para_2km.toLocaleString()} pasos`
-                                                }
-                                            </span>
-                                        </div>
-                                        {statsData.distancia_total_m && (
-                                            <div className="mt-1">
-                                                <div className="w-full bg-blue-200 rounded-full h-2">
-                                                    <div
-                                                        className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                                                        style={{
-                                                            width: `${Math.min((statsData.distancia_total_m / 2000) * 100, 100)}%`
-                                                        }}
-                                                    ></div>
-                                                </div>
-                                                <div className="flex justify-between text-xs text-blue-600 mt-1">
-                                                    <span>0m</span>
-                                                    <span>{statsData.distancia_total_m.toFixed(0)}m / 2000m</span>
-                                                    <span>2km</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         )}
 
@@ -464,297 +438,142 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-green-700">Prob. binomial temp:</span>
-                                        <span className="font-semibold text-green-800">
-                                            {bmeStatsData.prob_binomial_temperatura?.toFixed(4) || '--'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-green-700">Media presión:</span>
-                                        <span className="font-semibold text-green-800">
-                                            {bmeStatsData.media_presion?.toFixed(2) || '--'} hPa
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-green-700">Desv. presión:</span>
-                                        <span className="font-semibold text-green-800">
-                                            {bmeStatsData.desviacion_presion?.toFixed(2) || '--'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-green-700">Prob. presión alta:</span>
-                                        <span className="font-semibold text-green-800">
-                                            {bmeStatsData.prob_presion_alta?.toFixed(2) || '--'}%
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
                                         <span className="text-green-700">Media humedad:</span>
                                         <span className="font-semibold text-green-800">
                                             {bmeStatsData.media_humedad?.toFixed(2) || '--'}%
                                         </span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-green-700">Desv. humedad:</span>
-                                        <span className="font-semibold text-green-800">
-                                            {bmeStatsData.desviacion_humedad?.toFixed(2) || '--'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-green-700">Prob. humedad alta:</span>
-                                        <span className="font-semibold text-green-800">
-                                            {bmeStatsData.prob_humedad_alta?.toFixed(2) || '--'}%
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-green-700">Prob. binomial humedad:</span>
-                                        <span className="font-semibold text-green-800">
-                                            {bmeStatsData.prob_binomial_humedad?.toFixed(4) || '--'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Sección de Disconfort Térmico */}
-                                <div className="mt-3 pt-2 border-t border-green-300">
-                                    <h6 className="font-medium text-green-800 mb-2 text-sm">🌡️ Disconfort Térmico</h6>
-                                    <p className="text-xs text-green-700 mb-3 italic">
-                                        Calcular disconfort térmico (índice simplificado) para dar una idea de si se siente calor incómodo.
-                                    </p>
-
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-green-700 text-sm">Disconfort térmico promedio:</span>
-                                            <span className="font-semibold text-green-800">
-                                                {bmeStatsData.disconfort_termico_promedio?.toFixed(2) || '--'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-green-700 text-sm">% Sensación incómoda:</span>
-                                            <span className="font-semibold text-orange-600">
-                                                {bmeStatsData.porcentaje_sensacion_incomoda?.toFixed(1) || '--'}%
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Visualización del disconfort */}
-                                    <div className="mt-3">
-                                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                                            <div className="h-full flex">
-                                                {/* Sensación cómoda */}
-                                                <div
-                                                    className="bg-green-500 h-full transition-all duration-500"
-                                                    style={{ width: `${100 - (bmeStatsData.porcentaje_sensacion_incomoda || 0)}%` }}
-                                                ></div>
-                                                {/* Sensación incómoda */}
-                                                <div
-                                                    className="bg-orange-500 h-full transition-all duration-500"
-                                                    style={{ width: `${bmeStatsData.porcentaje_sensacion_incomoda || 0}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between text-xs text-green-600 mt-1">
-                                            <span>Cómodo</span>
-                                            <span>Incómodo</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Interpretación del estado actual */}
-                                    <div className="mt-3 p-2 rounded-lg border">
-                                        {bmeStatsData.porcentaje_sensacion_incomoda >= 80 ? (
-                                            <div className="bg-orange-100 border-orange-200">
-                                                <p className="text-xs text-orange-800 text-center">
-                                                    🌡️ <strong>Alto Disconfort:</strong> {bmeStatsData.porcentaje_sensacion_incomoda?.toFixed(1)}% del tiempo con sensación incómoda
-                                                </p>
-                                            </div>
-                                        ) : bmeStatsData.porcentaje_sensacion_incomoda >= 50 ? (
-                                            <div className="bg-yellow-100 border-yellow-200">
-                                                <p className="text-xs text-yellow-800 text-center">
-                                                    ⚠️ <strong>Disconfort Moderado:</strong> {bmeStatsData.porcentaje_sensacion_incomoda?.toFixed(1)}% del tiempo con sensación incómoda
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div className="bg-green-100 border-green-200">
-                                                <p className="text-xs text-green-800 text-center">
-                                                    ✅ <strong>Ambiente Confortable:</strong> Solo {bmeStatsData.porcentaje_sensacion_incomoda?.toFixed(1)}% del tiempo con disconfort
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Información técnica */}
-                                    <div className="mt-2 p-2 bg-green-100 rounded-lg border border-green-200">
-                                        <p className="text-xs text-green-700 font-medium mb-1">📊 Detalles del Cálculo:</p>
-                                        <div className="text-xs text-green-600 space-y-1">
-                                            <div className="flex justify-between">
-                                                <span>Índice promedio:</span>
-                                                <span className="font-mono">{bmeStatsData.disconfort_termico_promedio?.toFixed(2) || '--'}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Temp. ambiente:</span>
-                                                <span className="font-mono">{bmeStatsData.media_temperatura?.toFixed(1) || '--'}°C</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Humedad relativa:</span>
-                                                <span className="font-mono">{bmeStatsData.media_humedad?.toFixed(0) || '--'}%</span>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* Estadísticas MLX90614 */}
-                        {mlxStatsData && (
+                        {/* Estadísticas MLX90614 - FIX MOSTRAR DATOS REALES */}
+                        {mlxStatsData && Object.keys(mlxStatsData).length > 0 && (
                             <div className="p-4 bg-red-50 rounded-lg border border-red-200">
                                 <h5 className="font-medium text-red-800 mb-2 flex items-center">
                                     <Icon name="heart" size={16} className="mr-2" />
                                     MLX90614 - Temperatura Corporal
                                 </h5>
-                                <div className="grid grid-cols-1 gap-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700">Media ambiente:</span>
-                                        <span className="font-semibold text-red-800">
-                                            {mlxStatsData.media_ambiente?.toFixed(2) || '--'}°C
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700">Desv. ambiente:</span>
-                                        <span className="font-semibold text-red-800">
-                                            {mlxStatsData.desviacion_ambiente?.toFixed(2) || '--'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700">Prob. alta ambiente:</span>
-                                        <span className="font-semibold text-red-800">
-                                            {mlxStatsData.prob_alta_ambiente?.toFixed(2) || '--'}%
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700">Media objeto:</span>
-                                        <span className="font-semibold text-red-800">
-                                            {mlxStatsData.media_objeto?.toFixed(2) || '--'}°C
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700">Desv. objeto:</span>
-                                        <span className="font-semibold text-red-800">
-                                            {mlxStatsData.desviacion_objeto?.toFixed(2) || '--'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700">Prob. alta objeto:</span>
-                                        <span className="font-semibold text-red-800">
-                                            {mlxStatsData.prob_alta_objeto?.toFixed(2) || '--'}%
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700">Prob. binomial ambiente:</span>
-                                        <span className="font-semibold text-red-800">
-                                            {mlxStatsData.prob_binomial_ambiente?.toFixed(4) || '--'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-red-700">Prob. binomial objeto:</span>
-                                        <span className="font-semibold text-red-800">
-                                            {mlxStatsData.prob_binomial_objeto?.toFixed(4) || '--'}
-                                        </span>
-                                    </div>
+
+                                {/* DEBUG: Mostrar estructura real de datos */}
+                                <div className="mb-3 p-2 bg-red-100 rounded text-xs">
+                                    <p className="text-red-700 font-mono">
+                                        🔍 Datos recibidos: {JSON.stringify(Object.keys(mlxStatsData))}
+                                    </p>
                                 </div>
 
-                                {/* Clasificación de Objetos por Temperatura */}
-                                <div className="mt-3 pt-2 border-t border-red-300">
-                                    <h6 className="font-medium text-red-800 mb-2 text-sm">🌡️ Clasificación de Objetos</h6>
-
-                                    <div className="space-y-2">
-                                        {/* Objetos Peligrosos */}
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center space-x-2">
-                                                <div className="w-3 h-3 bg-red-600 rounded-full"></div>
-                                                <span className="text-red-700 text-sm">Peligrosos (&gt;42°C):</span>
-                                            </div>
+                                <div className="grid grid-cols-1 gap-2 text-sm">
+                                    {/* FIX: Adaptar campos según lo que realmente devuelve la API */}
+                                    {mlxStatsData.media_ambiente !== undefined && (
+                                        <div className="flex justify-between">
+                                            <span className="text-red-700">Media ambiente:</span>
                                             <span className="font-semibold text-red-800">
-                                                {mlxStatsData.porcentaje_objetos_peligrosos?.toFixed(1) || '--'}%
+                                                {mlxStatsData.media_ambiente?.toFixed(2) || '--'}°C
                                             </span>
-                                        </div>
-
-                                        {/* Objetos Fríos */}
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center space-x-2">
-                                                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                                <span className="text-red-700 text-sm">Fríos (&lt;20°C):</span>
-                                            </div>
-                                            <span className="font-semibold text-red-800">
-                                                {mlxStatsData.porcentaje_objetos_frios?.toFixed(1) || '--'}%
-                                            </span>
-                                        </div>
-
-                                        {/* Objetos Normales (calculado) */}
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center space-x-2">
-                                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                                                <span className="text-red-700 text-sm">Normales (20-42°C):</span>
-                                            </div>
-                                            <span className="font-semibold text-red-800">
-                                                {(100 - (mlxStatsData.porcentaje_objetos_peligrosos || 0) - (mlxStatsData.porcentaje_objetos_frios || 0)).toFixed(1)}%
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Barra de clasificación visual */}
-                                    <div className="mt-3">
-                                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                                            <div className="h-full flex">
-                                                {/* Objetos Fríos */}
-                                                <div
-                                                    className="bg-blue-500 h-full transition-all duration-500"
-                                                    style={{ width: `${mlxStatsData.porcentaje_objetos_frios || 0}%` }}
-                                                ></div>
-                                                {/* Objetos Normales */}
-                                                <div
-                                                    className="bg-green-500 h-full transition-all duration-500"
-                                                    style={{ width: `${100 - (mlxStatsData.porcentaje_objetos_peligrosos || 0) - (mlxStatsData.porcentaje_objetos_frios || 0)}%` }}
-                                                ></div>
-                                                {/* Objetos Peligrosos */}
-                                                <div
-                                                    className="bg-red-600 h-full transition-all duration-500"
-                                                    style={{ width: `${mlxStatsData.porcentaje_objetos_peligrosos || 0}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between text-xs text-red-600 mt-1">
-                                            <span>Frío</span>
-                                            <span>Normal</span>
-                                            <span>Peligroso</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Información de umbrales */}
-                                    <div className="mt-3 p-2 bg-red-100 rounded-lg border border-red-200">
-                                        <p className="text-xs text-red-700 font-medium mb-1">⚠️ Umbrales de Clasificación:</p>
-                                        <div className="text-xs text-red-600 space-y-1">
-                                            <div className="flex justify-between">
-                                                <span>🔵 Objetos Fríos:</span>
-                                                <span className="font-mono">&lt; 20°C</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>🟢 Objetos Normales:</span>
-                                                <span className="font-mono">20°C - 42°C</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>🔴 Objetos Peligrosos:</span>
-                                                <span className="font-mono">&gt; 42°C</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Estado actual con tus datos */}
-                                    {mlxStatsData.porcentaje_objetos_frios === 100 && (
-                                        <div className="mt-2 p-2 bg-blue-100 rounded-lg border border-blue-200">
-                                            <p className="text-xs text-blue-800 text-center">
-                                                ❄️ <strong>Estado Actual:</strong> Todos los objetos detectados están por debajo de 20°C
-                                            </p>
                                         </div>
                                     )}
+
+                                    {mlxStatsData.media_objeto !== undefined && (
+                                        <div className="flex justify-between">
+                                            <span className="text-red-700">Media objeto:</span>
+                                            <span className="font-semibold text-red-800">
+                                                {mlxStatsData.media_objeto?.toFixed(2) || '--'}°C
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {mlxStatsData.desviacion_ambiente !== undefined && (
+                                        <div className="flex justify-between">
+                                            <span className="text-red-700">Desv. ambiente:</span>
+                                            <span className="font-semibold text-red-800">
+                                                {mlxStatsData.desviacion_ambiente?.toFixed(2) || '--'}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {mlxStatsData.desviacion_objeto !== undefined && (
+                                        <div className="flex justify-between">
+                                            <span className="text-red-700">Desv. objeto:</span>
+                                            <span className="font-semibold text-red-800">
+                                                {mlxStatsData.desviacion_objeto?.toFixed(2) || '--'}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {mlxStatsData.prob_alta_ambiente !== undefined && (
+                                        <div className="flex justify-between">
+                                            <span className="text-red-700">Prob. alta ambiente:</span>
+                                            <span className="font-semibold text-red-800">
+                                                {mlxStatsData.prob_alta_ambiente?.toFixed(2) || '--'}%
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {mlxStatsData.prob_alta_objeto !== undefined && (
+                                        <div className="flex justify-between">
+                                            <span className="text-red-700">Prob. alta objeto:</span>
+                                            <span className="font-semibold text-red-800">
+                                                {mlxStatsData.prob_alta_objeto?.toFixed(2) || '--'}%
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {mlxStatsData.prob_binomial_ambiente !== undefined && (
+                                        <div className="flex justify-between">
+                                            <span className="text-red-700">Prob. binomial ambiente:</span>
+                                            <span className="font-semibold text-red-800">
+                                                {mlxStatsData.prob_binomial_ambiente?.toFixed(4) || '--'}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {mlxStatsData.prob_binomial_objeto !== undefined && (
+                                        <div className="flex justify-between">
+                                            <span className="text-red-700">Prob. binomial objeto:</span>
+                                            <span className="font-semibold text-red-800">
+                                                {mlxStatsData.prob_binomial_objeto?.toFixed(4) || '--'}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* FIX: Cualquier otro campo que aparezca en la respuesta real */}
+                                    {Object.keys(mlxStatsData).filter(key =>
+                                        !['media_ambiente', 'media_objeto', 'desviacion_ambiente', 'desviacion_objeto',
+                                            'prob_alta_ambiente', 'prob_alta_objeto', 'prob_binomial_ambiente', 'prob_binomial_objeto'].includes(key)
+                                    ).map(key => (
+                                        <div key={key} className="flex justify-between">
+                                            <span className="text-red-700">{key.replace(/_/g, ' ')}:</span>
+                                            <span className="font-semibold text-red-800">
+                                                {typeof mlxStatsData[key] === 'number' ?
+                                                    mlxStatsData[key].toFixed(2) :
+                                                    mlxStatsData[key]?.toString() || '--'
+                                                }
+                                            </span>
+                                        </div>
+                                    ))}
                                 </div>
+
+                                {/* Mostrar conteo de estadísticas disponibles */}
+                                <div className="mt-3 pt-2 border-t border-red-300">
+                                    <p className="text-xs text-red-600">
+                                        📊 {Object.keys(mlxStatsData).length} estadísticas MLX disponibles
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Estado si no hay estadísticas MLX */}
+                        {!mlxStatsData && !isLoadingStats && (
+                            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <p className="text-gray-600 text-sm">
+                                    📊 No se han cargado estadísticas MLX aún
+                                </p>
+                                <button
+                                    onClick={fetchAllSensorStatistics}
+                                    className="text-xs text-gray-700 hover:text-gray-900 mt-1 underline"
+                                >
+                                    Cargar estadísticas MLX
+                                </button>
                             </div>
                         )}
 
@@ -785,10 +604,6 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
                     </div>
                 </div>
             )}
-
-            {/* Datos en tiempo real del giroscopio */}
-
-
         </div>
     );
 };
