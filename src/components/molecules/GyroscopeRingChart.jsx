@@ -787,41 +787,8 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
             )}
 
             {/* Datos en tiempo real del giroscopio */}
-            {isConnected && (
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h5 className="font-medium text-blue-800 mb-2">Datos en Tiempo Real - Giroscopio</h5>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div className="text-center">
-                            <span className="text-blue-600">Eje X:</span>
-                            <p className="font-mono font-semibold text-blue-800">{currentData.x.toFixed(1)}°/s</p>
-                        </div>
-                        <div className="text-center">
-                            <span className="text-blue-600">Eje Y:</span>
-                            <p className="font-mono font-semibold text-blue-800">{currentData.y.toFixed(1)}°/s</p>
-                        </div>
-                        <div className="text-center">
-                            <span className="text-blue-600">Eje Z:</span>
-                            <p className="font-mono font-semibold text-blue-800">{currentData.z.toFixed(1)}°/s</p>
-                        </div>
-                    </div>
-                    <div className="mt-2 text-center">
-                        <span className="text-blue-600 text-sm">Magnitud total:</span>
-                        <span className="ml-2 font-semibold text-blue-800">{magnitude.toFixed(1)}°/s</span>
-                    </div>
-                </div>
-            )}
 
-            {/* Información adicional */}
-            <div className="mt-4 text-center">
-                <p className="text-xs text-gray-500">
-                    Sensor MPU6050 • Análisis estadístico de actividad • {statsData ? 'Estadísticas cargadas' : 'Cargando estadísticas...'}
-                </p>
-                {statsData && (
-                    <p className="text-xs text-blue-600 mt-1">
-                        📊 Última actualización: {new Date().toLocaleTimeString()}
-                    </p>
-                )}
-            </div>
+
         </div>
     );
 };

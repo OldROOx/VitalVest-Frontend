@@ -248,11 +248,7 @@ export default function Dashboard() {
                     <h3 className="text-lg font-semibold text-gray-900">
                         Datos en Tiempo Real
                     </h3>
-                    <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600">
-                            Fuente: {wsConnected ? 'WebSocket' : apiConnected ? 'API' : 'Sin conexión'}
-                        </span>
-                    </div>
+
                 </div>
 
                 {/* Grid de sensores */}
@@ -451,51 +447,6 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Debug info para troubleshooting */}
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600">
-                        🔧 Debug: hasRealStepsData={hasRealStepsData.toString()}, isStepsInitialized={isStepsInitialized.toString()},
-                        activityHistory.length={activityHistory.length},
-                        totalPasos={activityHistory.reduce((sum, day) => sum + day.value, 0)}
-                    </p>
-                </div>
-
-                {/* Información del short polling de pasos */}
-                {stepsFromPolling !== null && (
-                    <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                        <div className="flex items-center space-x-2">
-                            <Icon name="activity" size={16} className="text-orange-600" />
-                            <p className="text-sm text-orange-800">
-                                <strong>Pasos obtenidos via Short Polling:</strong> {stepsFromPolling.toLocaleString()}
-                            </p>
-                        </div>
-                        <p className="text-xs text-orange-600 mt-1">
-                            📡 Datos actualizados cada 5 segundos desde /mpu
-                        </p>
-                    </div>
-                )}
-
-                {/* Información de último mensaje */}
-                {(lastMessage || lastUpdate) && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-700">
-                            <strong>Última actualización:</strong> {
-                            lastMessage?.timestamp ?
-                                new Date(lastMessage.timestamp).toLocaleString() :
-                                lastUpdate ? new Date(lastUpdate).toLocaleString() :
-                                    'No disponible'
-                        }
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            Fuente: {wsConnected ? 'WebSocket en tiempo real' : apiConnected ? 'API REST' : 'Sin conexión'}
-                        </p>
-                        {stepsFromPolling !== null && (
-                            <p className="text-xs text-gray-500 mt-1">
-                                👟 Pasos: Short Polling independiente cada 5 segundos
-                            </p>
-                        )}
-                    </div>
-                )}
             </div>
 
             {/* Gráficas - MEJORADO PARA MOSTRAR ESTADO REAL */}
@@ -503,7 +454,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-lg border border-gray-200">
                     <Chart
                         type="bar"
-                        title={`Actividad Semanal ${hasRealStepsData ? '(Datos Reales)' : '(Sin Datos)'}`}
+                        title={`Actividad Semanal ${hasRealStepsData ? '(Datos)' : '(Sin Datos)'}`}
                         data={activityHistory}
                     />
                     {/* Debug info para la gráfica */}
