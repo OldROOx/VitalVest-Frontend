@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx - CORREGIDO PARA DATOS REALES + SHORT POLLING SOLO PARA PASOS
+// src/pages/Dashboard.jsx - FIX SOBRESCRITURA DE DATOS
 import { useState, useEffect } from 'react';
 
 import { Chart } from '../components/molecules/Chart';
@@ -40,8 +40,12 @@ export default function Dashboard() {
     const [temperatureHistory, setTemperatureHistory] = useState([]);
     const [activityHistory, setActivityHistory] = useState([]);
 
-    // ✨ NUEVO: Estado específico para pasos con short polling
+    // Estado específico para pasos con short polling
     const [stepsFromPolling, setStepsFromPolling] = useState(null);
+
+    // NUEVO: Flags para controlar inicialización
+    const [hasRealStepsData, setHasRealStepsData] = useState(false);
+    const [isStepsInitialized, setIsStepsInitialized] = useState(false);
 
     // Log para debug
     useEffect(() => {
@@ -51,11 +55,14 @@ export default function Dashboard() {
             currentValues,
             wsSensorData,
             hasValidData: hasValidData(),
-            summary: getSensorSummary()
+            summary: getSensorSummary(),
+            hasRealStepsData,
+            isStepsInitialized,
+            activityHistoryLength: activityHistory.length
         });
-    }, [apiConnected, wsConnected, currentValues, wsSensorData, hasValidData, getSensorSummary]);
+    }, [apiConnected, wsConnected, currentValues, wsSensorData, hasValidData, getSensorSummary, hasRealStepsData, isStepsInitialized, activityHistory.length]);
 
-    // ✨ NUEVO: Short polling exclusivo para pasos
+    // Short polling exclusivo para pasos - MEJORADO PARA PREVENIR SOBRESCRITURA
     useEffect(() => {
         const fetchSteps = async () => {
             try {
@@ -71,11 +78,68 @@ export default function Dashboard() {
 
                 if (response.ok) {
                     const result = await response.json();
-                    console.log('📊 Respuesta de /mpu:', result);
+                    console.log('📊 Respuesta completa de /mpu:', result);
 
-                    // Tu amigo ya implementó que en /mpu el campo "pasos" muestra el total
-                    const totalSteps = result.pasos || 0;
-                    console.log('👟 Pasos del short polling:', totalSteps);
+                    let totalSteps = 0;
+
+                    if (result && result.pasos && Array.isArray(result.pasos)) {
+                        console.log('📦 result.pasos es un array con', result.pasos.length, 'elementos');
+
+                        // Procesar datos para la gráfica semanal
+                        const stepsData = result.pasos;
+
+                        if (stepsData.length > 0) {
+                            // Agrupar pasos por día de la semana
+                            const groupedByDay = stepsData.reduce((acc, entry) => {
+                                if (entry.fecha && entry.pasos) {
+                                    const date = new Date(entry.fecha);
+                                    const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
+
+                                    if (!acc[dayName]) {
+                                        acc[dayName] = 0;
+                                    }
+                                    acc[dayName] += entry.pasos;
+                                }
+                                return acc;
+                            }, {});
+
+                            console.log('📊 Pasos agrupados por día:', groupedByDay);
+
+                            // Crear datos para la gráfica
+                            const daysOfWeek = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+                            const newActivityHistory = daysOfWeek.map(day => ({
+                                label: day,
+                                value: groupedByDay[day] || 0
+                            }));
+
+                            // SOLO actualizar si hay datos reales
+                            const hasSteps = newActivityHistory.some(day => day.value > 0);
+                            if (hasSteps) {
+                                setActivityHistory(newActivityHistory);
+                                setHasRealStepsData(true);
+                                setIsStepsInitialized(true);
+                                console.log('✅ Datos de actividad REALES actualizados:', newActivityHistory);
+                            } else {
+                                console.log('⚠️ No hay pasos en los datos, manteniendo estado actual');
+                            }
+
+                            // Total de pasos para la tarjeta
+                            const lastEntry = stepsData[stepsData.length - 1];
+                            totalSteps = lastEntry.pasos || 0;
+                            console.log('👟 Último entry:', lastEntry);
+                            console.log('👟 Pasos del último entry:', totalSteps);
+                        } else {
+                            console.log('⚠️ Array de pasos está vacío');
+                        }
+                    } else if (result && typeof result.pasos === 'number') {
+                        totalSteps = result.pasos;
+                        console.log('👟 Pasos como número directo:', totalSteps);
+                    } else {
+                        console.warn('⚠️ Estructura de datos inesperada:', result);
+                        totalSteps = 0;
+                    }
+
+                    console.log('👟 Pasos finales del short polling:', totalSteps);
                     setStepsFromPolling(totalSteps);
                 } else {
                     console.warn('⚠️ Error en short polling de pasos:', response.status);
@@ -86,10 +150,7 @@ export default function Dashboard() {
         };
 
         if (apiConnected) {
-            // Ejecutar inmediatamente
             fetchSteps();
-
-            // Short polling cada 5 segundos solo para pasos
             const interval = setInterval(fetchSteps, 5000);
             console.log('🔄 Short polling de pasos iniciado');
 
@@ -124,101 +185,37 @@ export default function Dashboard() {
                     value: currentTemp
                 });
 
-                // Mantener solo las últimas 20 entradas
                 return newData.slice(-20);
             });
         }
     }, [wsSensorData, currentValues]);
 
-    // ✨ MODIFICADO: Actualizar gráfica de actividad con pasos del short polling
-    // ✨ NUEVO: Short polling exclusivo para pasos - CORREGIDO PARA TU ESTRUCTURA DE DATOS
+    // MODIFICADO: Inicializar gráficas SOLO si no hay datos reales y no se han inicializado
     useEffect(() => {
-        const fetchSteps = async () => {
-            try {
-                console.log('👟 Short polling para pasos...');
-
-                const token = localStorage.getItem('token');
-                const response = await fetch('https://vivaltest-back.namixcode.cc/mpu', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('📊 Respuesta completa de /mpu:', result);
-
-                    // CORREGIDO: Tu backend devuelve { "pasos": [{...}, {...}] }
-                    let totalSteps = 0;
-
-                    if (result && result.pasos && Array.isArray(result.pasos)) {
-                        console.log('📦 result.pasos es un array con', result.pasos.length, 'elementos');
-
-                        // Opción 1: Tomar el último elemento (el más reciente)
-                        if (result.pasos.length > 0) {
-                            const lastEntry = result.pasos[result.pasos.length - 1];
-                            totalSteps = lastEntry.pasos || 0;
-                            console.log('👟 Último entry:', lastEntry);
-                            console.log('👟 Pasos del último entry:', totalSteps);
-                        }
-
-                        // Opción 2: Si quieres la suma de todos los pasos
-                        // totalSteps = result.pasos.reduce((sum, entry) => sum + (entry.pasos || 0), 0);
-                        // console.log('👟 Suma total de todos los pasos:', totalSteps);
-                    } else if (result && typeof result.pasos === 'number') {
-                        // Fallback si alguna vez devuelve un número directo
-                        totalSteps = result.pasos;
-                        console.log('👟 Pasos como número directo:', totalSteps);
-                    } else {
-                        console.warn('⚠️ Estructura de datos inesperada:', result);
-                        totalSteps = 0;
-                    }
-
-                    console.log('👟 Pasos finales del short polling:', totalSteps);
-                    setStepsFromPolling(totalSteps);
-                } else {
-                    console.warn('⚠️ Error en short polling de pasos:', response.status);
-                }
-            } catch (error) {
-                console.error('❌ Error en short polling de pasos:', error);
-            }
-        };
-
-        if (apiConnected) {
-            // Ejecutar inmediatamente
-            fetchSteps();
-
-            // Short polling cada 5 segundos solo para pasos
-            const interval = setInterval(fetchSteps, 5000);
-            console.log('🔄 Short polling de pasos iniciado');
-
-            return () => {
-                clearInterval(interval);
-                console.log('⏹️ Short polling de pasos detenido');
-            };
-        }
-    }, [apiConnected]);
-
-    // Inicializar gráficas con datos por defecto si están vacías
-    useEffect(() => {
+        // Temperatura: Solo si está vacía
         if (temperatureHistory.length === 0) {
             const defaultTempData = Array.from({ length: 10 }, (_, i) => ({
                 label: `${String(i * 2).padStart(2, '0')}:00`,
                 value: 36.5 + (Math.random() - 0.5) * 1.5
             }));
             setTemperatureHistory(defaultTempData);
+            console.log('🔧 Inicializando temperatura con datos por defecto');
         }
 
-        if (activityHistory.length === 0) {
+        // CRÍTICO: Solo inicializar pasos si NO hay datos reales Y no se ha inicializado
+        if (!hasRealStepsData && !isStepsInitialized && activityHistory.length === 0) {
             const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
             const defaultActivityData = days.map(day => ({
                 label: day,
-                value: 0
+                value: 0 // SIEMPRE usar 0 cuando no hay datos reales
             }));
             setActivityHistory(defaultActivityData);
+            setIsStepsInitialized(true);
+            console.log('🔧 Inicializando actividad con datos vacíos (no hay datos reales)');
+        } else if (hasRealStepsData) {
+            console.log('✅ Saltando inicialización porque ya hay datos reales de pasos');
         }
-    }, []);
+    }, [hasRealStepsData, isStepsInitialized, activityHistory.length, temperatureHistory.length]);
 
     // Funciones helper
     const isValidNumber = (value) => {
@@ -229,7 +226,7 @@ export default function Dashboard() {
         return isValidNumber(value) ? Number(value).toFixed(decimals) : '--';
     };
 
-    // ✨ MODIFICADO: Combinar datos para estadísticas (usar pasos del short polling cuando disponible)
+    // Combinar datos para estadísticas
     const stats = {
         bodyTemp: wsSensorData?.temperatura_objeto || currentValues?.temperatura_corporal || null,
         steps: stepsFromPolling !== null ? stepsFromPolling : (wsSensorData?.pasos || currentValues?.pasos || 0),
@@ -243,11 +240,7 @@ export default function Dashboard() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-gray-900">Dashboard VitalVest</h1>
-
             </div>
-
-            {/* Estadísticas principales */}
-
 
             {/* DATOS EN TIEMPO REAL - COMBINANDO API Y WEBSOCKET */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -328,7 +321,7 @@ export default function Dashboard() {
                         </p>
                     </div>
 
-                    {/* Humedad - CORREGIDO: rounded-lg en lugar de rounded-lng */}
+                    {/* Humedad */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
                         isValidNumber(wsSensorData?.humedad || currentValues?.humedad_relativa)
                             ? 'bg-green-50 border-green-200'
@@ -360,7 +353,7 @@ export default function Dashboard() {
                         </p>
                     </div>
 
-                    {/* ✨ MODIFICADO: Pasos (MPU6050) - Mostrar pasos del short polling */}
+                    {/* Pasos (MPU6050) */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
                         isValidNumber(stepsFromPolling !== null ? stepsFromPolling : (wsSensorData?.pasos || currentValues?.pasos))
                             ? 'bg-orange-50 border-orange-200'
@@ -458,7 +451,16 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* ✨ NUEVO: Información del short polling de pasos */}
+                {/* Debug info para troubleshooting */}
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-600">
+                        🔧 Debug: hasRealStepsData={hasRealStepsData.toString()}, isStepsInitialized={isStepsInitialized.toString()},
+                        activityHistory.length={activityHistory.length},
+                        totalPasos={activityHistory.reduce((sum, day) => sum + day.value, 0)}
+                    </p>
+                </div>
+
+                {/* Información del short polling de pasos */}
                 {stepsFromPolling !== null && (
                     <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
                         <div className="flex items-center space-x-2">
@@ -468,7 +470,7 @@ export default function Dashboard() {
                             </p>
                         </div>
                         <p className="text-xs text-orange-600 mt-1">
-                            📡 Datos actualizados cada 5 segundos desde /mpu (implementado por tu amigo)
+                            📡 Datos actualizados cada 5 segundos desde /mpu
                         </p>
                     </div>
                 )}
@@ -496,14 +498,22 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* Gráficas */}
+            {/* Gráficas - MEJORADO PARA MOSTRAR ESTADO REAL */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-lg border border-gray-200">
                     <Chart
                         type="bar"
-                        title={`Actividad Semanal ${stepsFromPolling !== null ? '(Short Polling)' : '(Pasos)'}`}
+                        title={`Actividad Semanal ${hasRealStepsData ? '(Datos Reales)' : '(Sin Datos)'}`}
                         data={activityHistory}
                     />
+                    {/* Debug info para la gráfica */}
+                    <div className="px-6 pb-4">
+                        <p className="text-xs text-gray-500">
+                            📊 Estado: {hasRealStepsData ? 'Datos reales cargados' : 'Esperando datos'} |
+                            Total pasos: {activityHistory.reduce((sum, day) => sum + day.value, 0)} |
+                            Días con datos: {activityHistory.filter(d => d.value > 0).length}
+                        </p>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-lg border border-gray-200">
@@ -527,14 +537,8 @@ export default function Dashboard() {
                     Estado de Conexiones
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-
                 </div>
 
-                {/* ✨ NUEVO: Estado del Short Polling para pasos */}
-
-
-                {/* CORREGIDO: Componente GyroscopeRingChart sin la 'z' al final */}
                 <GyroscopeRingChart
                     data={wsSensorData}
                     isConnected={wsConnected}

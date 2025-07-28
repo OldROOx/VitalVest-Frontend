@@ -1,4 +1,4 @@
-// src/services/apiService.js - CORREGIDO PARA TU BACKEND
+// src/services/apiService.js - ACTUALIZADO PARA SUDORACIÓN
 const API_BASE_URL = 'https://vivaltest-back.namixcode.cc';
 
 class ApiService {
@@ -144,7 +144,7 @@ class ApiService {
         }
     }
 
-    // GSR
+    // GSR - ACTUALIZADO PARA SUDORACIÓN
     async getGSRData() {
         try {
             const response = await fetch(`${API_BASE_URL}/gsr`, {
@@ -257,22 +257,41 @@ class ApiService {
             latestMPU
         });
 
+        // FIX: Determinar si GSR usa porcentaje o conductancia
+        let gsrConductancia = null;
+        let gsrPorcentaje = null;
+
+        if (latestGSR) {
+            if (latestGSR.porcentaje !== undefined && latestGSR.porcentaje !== null) {
+                // La API envía porcentaje
+                gsrPorcentaje = latestGSR.porcentaje;
+                gsrConductancia = latestGSR.porcentaje / 100; // Convertir a decimal para compatibilidad
+                console.log('🔧 GSR usando porcentaje:', gsrPorcentaje, '-> conductancia:', gsrConductancia);
+            } else if (latestGSR.conductancia !== undefined && latestGSR.conductancia !== null) {
+                // Fallback a conductancia si existe
+                gsrConductancia = latestGSR.conductancia;
+                gsrPorcentaje = latestGSR.conductancia * 100;
+                console.log('🔧 GSR usando conductancia:', gsrConductancia, '-> porcentaje:', gsrPorcentaje);
+            }
+        }
+
         return {
             current: {
-                // BME280 - AJUSTADO A TU ESTRUCTURA DE BASE DE DATOS
+                // BME280
                 temperatura_ambiente: latestBME?.temperatura || null,
                 humedad_relativa: latestBME?.humedad || null,
                 presion: latestBME?.presion || null,
 
-                // GSR - AJUSTADO A TU ESTRUCTURA
-                conductancia: latestGSR?.conductancia || null,
+                // GSR - FIX: Manejar tanto porcentaje como conductancia
+                conductancia: gsrConductancia,
+                porcentaje: gsrPorcentaje, // Nuevo campo
                 estado_hidratacion: latestGSR?.estado_hidratacion || null,
 
-                // MLX90614 - AJUSTADO A TU ESTRUCTURA
+                // MLX90614
                 temperatura_corporal: latestMLX?.temperatura_objeto || null,
                 temperatura_ambiente_mlx: latestMLX?.temperatura_ambiente || null,
 
-                // MPU6050 - AJUSTADO A TU ESTRUCTURA
+                // MPU6050
                 pasos: latestMPU?.pasos || null,
                 fecha_actividad: latestMPU?.fecha || null
             },
@@ -303,10 +322,25 @@ class ApiService {
         const avgAmbientTemp = bmeTemps.length > 0 ?
             bmeTemps.reduce((a, b) => a + b, 0) / bmeTemps.length : null;
 
-        // Estadísticas de hidratación/conductancia
-        const gsrValues = GSR?.map(d => d.conductancia).filter(c => c != null) || [];
+        // FIX: Estadísticas de GSR (compatible con conductancia o porcentaje)
+        const gsrValues = GSR?.map(d => {
+            // Priorizar porcentaje si existe, sino usar conductancia
+            if (d.porcentaje !== undefined && d.porcentaje !== null) {
+                return d.porcentaje;
+            } else if (d.conductancia !== undefined && d.conductancia !== null) {
+                return d.conductancia * 100; // Convertir conductancia a porcentaje
+            }
+            return null;
+        }).filter(c => c != null) || [];
+
         const avgHydration = gsrValues.length > 0 ?
-            (gsrValues.reduce((a, b) => a + b, 0) / gsrValues.length) * 100 : null;
+            gsrValues.reduce((a, b) => a + b, 0) / gsrValues.length : null;
+
+        console.log('📊 GSR Stats calculadas:', {
+            valores_raw: GSR?.slice(-3), // Últimos 3 valores para debug
+            valores_procesados: gsrValues.slice(-3),
+            promedio: avgHydration
+        });
 
         return {
             bodyTemp: {
@@ -327,7 +361,7 @@ class ApiService {
                 max: bmeTemps.length > 0 ? Math.max(...bmeTemps) : null
             },
             hydration: {
-                current: gsrValues.length > 0 ? gsrValues[gsrValues.length - 1] * 100 : null,
+                current: gsrValues.length > 0 ? gsrValues[gsrValues.length - 1] : null,
                 average: avgHydration
             }
         };
@@ -360,7 +394,7 @@ class ApiService {
                 method: 'POST',
                 headers: this.getAuthHeaders(),
                 body: JSON.stringify({
-                    conductancia: data.conductancia,
+                    conductancia: data.conductancia || data.porcentaje,
                     estado_hidratacion: data.estado_hidratacion
                 })
             });

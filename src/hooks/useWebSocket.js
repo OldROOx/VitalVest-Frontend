@@ -1,4 +1,4 @@
-// src/hooks/useWebSocket.js - CORREGIDO PARA DATOS REALES
+// src/hooks/useWebSocket.js - FIX PARA PORCENTAJE CON MAYÚSCULA
 import { useState, useEffect, useRef } from 'react';
 import { websocketService } from '../services/websocketService';
 
@@ -14,7 +14,8 @@ export const useWebSocket = () => {
         pasos: null,
         temperatura_ambiente: null,
         temperatura_objeto: null,
-        conductancia: null,
+        conductancia: null,           // Mantener para compatibilidad con frontend
+        porcentaje: null,             // Nuevo campo que envía la API
         estado_hidratacion: null
     });
 
@@ -40,14 +41,6 @@ export const useWebSocket = () => {
             setSensorData(prevData => {
                 const newData = { ...prevData };
 
-                // Estructura esperada de tu WebSocket:
-                // {
-                //   "bme280": { "temperatura": X, "presion": Y, "humedad": Z },
-                //   "mpu6050": { "pasos": N },
-                //   "mlx90614": { "temperatura_ambiente": X, "temp_objeto": Y },
-                //   "GSR": { "porcentaje": P }
-                // }
-
                 if (data.bme280) {
                     newData.temperatura = data.bme280.temperatura;
                     newData.presion = data.bme280.presion;
@@ -63,12 +56,40 @@ export const useWebSocket = () => {
                     newData.temperatura_objeto = data.mlx90614.temp_objeto;
                 }
 
+                // FIX: GSR maneja tanto "Porcentaje" (mayúscula) como "porcentaje" (minúscula)
                 if (data.GSR) {
-                    // Convertir porcentaje a conductancia simulada para compatibilidad
-                    newData.conductancia = data.GSR.porcentaje / 100;
-                    newData.estado_hidratacion = data.GSR.porcentaje > 70 ? 'Bien hidratado' :
-                        data.GSR.porcentaje > 50 ? 'Moderadamente hidratado' :
-                            'Deshidratado';
+                    // Buscar el campo porcentaje en diferentes formatos
+                    const porcentajeValue = data.GSR.Porcentaje || data.GSR.porcentaje || data.GSR.PORCENTAJE;
+
+                    console.log('🔧 GSR Raw data:', data.GSR);
+                    console.log('🔧 Porcentaje encontrado:', porcentajeValue);
+
+                    if (porcentajeValue !== undefined && porcentajeValue !== null) {
+                        // La API envía "Porcentaje", lo guardamos en ambos campos para compatibilidad
+                        newData.porcentaje = porcentajeValue;
+                        newData.conductancia = porcentajeValue / 100; // Convertir a decimal para compatibilidad
+
+                        console.log('🔧 GSR Datos procesados:', {
+                            porcentaje_original: porcentajeValue,
+                            porcentaje_guardado: newData.porcentaje,
+                            conductancia_calculada: newData.conductancia
+                        });
+
+                        // Clasificar nivel de hidratación basado en porcentaje
+                        if (porcentajeValue >= 80) {
+                            newData.estado_hidratacion = 'Muy bien hidratado';
+                        } else if (porcentajeValue >= 60) {
+                            newData.estado_hidratacion = 'Bien hidratado';
+                        } else if (porcentajeValue >= 30) {
+                            newData.estado_hidratacion = 'Moderadamente hidratado';
+                        } else {
+                            newData.estado_hidratacion = 'Deshidratado';
+                        }
+
+                        console.log('🔧 Estado hidratación calculado:', newData.estado_hidratacion);
+                    } else {
+                        console.warn('⚠️ No se encontró campo porcentaje en GSR:', data.GSR);
+                    }
                 }
 
                 return newData;
@@ -112,7 +133,8 @@ export const useWebSocket = () => {
             sensorData.temperatura !== null ||
             sensorData.pasos !== null ||
             sensorData.temperatura_objeto !== null ||
-            sensorData.conductancia !== null
+            sensorData.conductancia !== null ||
+            sensorData.porcentaje !== null
         );
     };
 
@@ -129,7 +151,7 @@ export const useWebSocket = () => {
         hasTemperature: () => sensorData.temperatura !== null,
         hasSteps: () => sensorData.pasos !== null,
         hasBodyTemperature: () => sensorData.temperatura_objeto !== null,
-        hasHydration: () => sensorData.conductancia !== null,
+        hasHydration: () => sensorData.conductancia !== null || sensorData.porcentaje !== null,
 
         // Función para obtener resumen de los datos
         getSensorSummary: () => ({
@@ -140,7 +162,8 @@ export const useWebSocket = () => {
                 humedad: sensorData.humedad !== null,
                 pasos: sensorData.pasos !== null,
                 temperatura_objeto: sensorData.temperatura_objeto !== null,
-                conductancia: sensorData.conductancia !== null
+                conductancia: sensorData.conductancia !== null,
+                porcentaje: sensorData.porcentaje !== null
             },
             lastUpdate: lastMessage?.timestamp
         }),

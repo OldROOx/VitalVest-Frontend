@@ -1,4 +1,4 @@
-// src/pages/Configuration.jsx - CORREGIDO PARA DATOS REALES
+// src/pages/Configuration.jsx - ACTUALIZADO PARA SUDORACIÓN
 import { useState } from 'react'
 import { Button } from '../components/atoms/Button'
 import { FormField } from '../components/molecules/FormField'
@@ -30,7 +30,7 @@ export default function Configuration() {
         getConnectionStats
     } = useWebSocket();
 
-    // Configuración de sensores basada en datos reales
+    // Configuración de sensores basada en datos reales - ACTUALIZADO PARA SUDORACIÓN
     const sensors = [
         {
             id: 1,
@@ -43,10 +43,10 @@ export default function Configuration() {
         },
         {
             id: 2,
-            name: 'Sensor GSR (Hidratación)',
-            status: (wsSensorData?.conductancia !== null || currentValues?.conductancia !== null) ? 'Activo' : 'Inactivo',
-            lastReading: (wsSensorData?.conductancia || currentValues?.conductancia) ?
-                `${(wsSensorData?.conductancia || currentValues?.conductancia)?.toFixed(3)} - ${wsSensorData?.estado_hidratacion || currentValues?.estado_hidratacion || 'Estado unknown'}` :
+            name: 'Sensor GSR (Sudoración)', // CAMBIADO: Hidratación → Sudoración
+            status: (wsSensorData?.porcentaje !== null || currentValues?.porcentaje !== null) ? 'Activo' : 'Inactivo', // CAMBIADO: conductancia → porcentaje
+            lastReading: (wsSensorData?.porcentaje || currentValues?.porcentaje) ?
+                `${(wsSensorData?.porcentaje || currentValues?.porcentaje)?.toFixed(1)}% - ${wsSensorData?.estado_sudoracion || currentValues?.estado_sudoracion || 'Estado desconocido'}` : // CAMBIADO
                 'Sin datos',
             icon: 'droplet'
         },
@@ -309,7 +309,7 @@ export default function Configuration() {
             {/* Sensor Status */}
             <SensorPanel sensors={sensors} />
 
-            {/* Real-time Sensor Data Preview */}
+            {/* Real-time Sensor Data Preview - ACTUALIZADO PARA SUDORACIÓN */}
             {(hasValidApiData || hasValidWsData) && (
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -339,17 +339,17 @@ export default function Configuration() {
                             </div>
                         )}
 
-                        {/* GSR */}
-                        {((wsSensorData?.conductancia !== null || wsSensorData?.estado_hidratacion) ||
-                            (currentValues?.conductancia !== null || currentValues?.estado_hidratacion)) && (
+                        {/* GSR - ACTUALIZADO PARA SUDORACIÓN */}
+                        {((wsSensorData?.porcentaje !== null || wsSensorData?.estado_sudoracion) ||
+                            (currentValues?.porcentaje !== null || currentValues?.estado_sudoracion)) && (
                             <div className="bg-green-50 p-4 rounded-lg">
-                                <h4 className="font-medium text-green-900">GSR (Hidratación)</h4>
+                                <h4 className="font-medium text-green-900">GSR (Sudoración)</h4>
                                 <div className="space-y-1 mt-2">
                                     <p className="text-sm text-green-700">
-                                        Conductancia: {(wsSensorData?.conductancia || currentValues?.conductancia)?.toFixed(3) || '--'}
+                                        Porcentaje: {(wsSensorData?.porcentaje || currentValues?.porcentaje)?.toFixed(1) || '--'}%
                                     </p>
                                     <p className="text-sm text-green-700">
-                                        Estado: {wsSensorData?.estado_hidratacion || currentValues?.estado_hidratacion || '--'}
+                                        Estado: {wsSensorData?.estado_sudoracion || currentValues?.estado_sudoracion || '--'}
                                     </p>
                                 </div>
                             </div>
@@ -423,7 +423,7 @@ export default function Configuration() {
                             </label>
                             <label className="flex items-center">
                                 <input type="checkbox" className="mr-2" defaultChecked />
-                                <span className="text-sm">Alertas de hidratación</span>
+                                <span className="text-sm">Alertas de sudoración</span> {/* CAMBIADO: hidratación → sudoración */}
                             </label>
                             <label className="flex items-center">
                                 <input type="checkbox" className="mr-2" />
