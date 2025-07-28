@@ -456,11 +456,7 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
                                 </h5>
 
                                 {/* DEBUG: Mostrar estructura real de datos */}
-                                <div className="mb-3 p-2 bg-red-100 rounded text-xs">
-                                    <p className="text-red-700 font-mono">
-                                        🔍 Datos recibidos: {JSON.stringify(Object.keys(mlxStatsData))}
-                                    </p>
-                                </div>
+
 
                                 <div className="grid grid-cols-1 gap-2 text-sm">
                                     {/* FIX: Adaptar campos según lo que realmente devuelve la API */}

@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx - FIX PASOS SIMPLIFICADO
+// src/pages/Dashboard.jsx - COMPLETO ACTUALIZADO
 import { useState, useEffect } from 'react';
 
 import { Chart } from '../components/molecules/Chart';
@@ -44,153 +44,65 @@ export default function Dashboard() {
     const [currentSteps, setCurrentSteps] = useState(0);
     const [hasStepsData, setHasStepsData] = useState(false);
 
-    // NUEVO: Polling simplificado solo para pasos diarios
+    // NUEVO: Polling mejorado para pasos en tiempo real
     useEffect(() => {
         const fetchDailySteps = async () => {
             try {
                 console.log('👟 Obteniendo pasos diarios...');
-
                 const token = localStorage.getItem('token');
 
-                // Probar ambos endpoints
-                const endpoints = [
-                    'https://vivaltest-back.namixcode.cc/mpu',
-                    'https://vivaltest-back.namixcode.cc/mpu/get'
-                ];
-
-                let stepsData = null;
-                let sourceEndpoint = '';
-
-                for (const endpoint of endpoints) {
-                    try {
-                        console.log(`🔄 Probando endpoint: ${endpoint}`);
-                        const response = await fetch(endpoint, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                            }
-                        });
-
-                        if (response.ok) {
-                            const result = await response.json();
-                            console.log(`✅ Respuesta de ${endpoint}:`, result);
-
-                            if (result) {
-                                stepsData = result;
-                                sourceEndpoint = endpoint;
-                                break;
-                            }
-                        } else {
-                            console.warn(`⚠️ ${endpoint} falló con status:`, response.status);
-                        }
-                    } catch (err) {
-                        console.warn(`⚠️ Error en ${endpoint}:`, err.message);
+                const response = await fetch('https://vivaltest-back.namixcode.cc/mpu', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
-                }
+                });
 
-                if (!stepsData) {
-                    console.log('❌ Ningún endpoint de pasos funcionó, usando datos de prueba');
-                    // Crear datos de prueba para que funcione la gráfica
+                if (!response.ok) {
+                    console.warn('⚠️ Error en API de pasos:', response.status);
                     createTestStepsData();
                     return;
                 }
 
-                console.log(`📊 Usando datos de: ${sourceEndpoint}`);
-                console.log('📊 Estructura completa:', stepsData);
+                const result = await response.json();
+                console.log('📊 Datos de pasos recibidos:', result);
 
-                // Procesar los datos según diferentes estructuras posibles
                 let processedData = [];
-                let totalSteps = 0;
+                let totalStepsToday = 0;
 
-                // Caso 1: { "pasos": [...] } - Tu backend principal
-                if (stepsData.pasos && Array.isArray(stepsData.pasos)) {
-                    console.log('📦 Caso 1: Array de pasos encontrado');
+                // Procesar datos según la estructura del backend
+                if (result.pasos && Array.isArray(result.pasos)) {
+                    // Ordenar por fecha (más reciente primero)
+                    const sortedData = result.pasos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-                    stepsData.pasos.forEach((entry, index) => {
-                        console.log(`📅 Entry ${index}:`, entry);
+                    // Obtener pasos de hoy (primer elemento)
+                    if (sortedData.length > 0) {
+                        totalStepsToday = sortedData[0].pasos || 0;
+                    }
 
-                        const pasos = entry.pasos || entry.Pasos || 0;
-                        const fecha = entry.fecha || entry.Fecha || new Date().toISOString();
+                    // Procesar últimos 7 días para la gráfica
+                    const last7Days = sortedData.slice(0, 7).reverse(); // Invertir para mostrar cronológicamente
 
-                        if (pasos > 0) {
-                            const day = new Date(fecha).toLocaleDateString('es-ES', {
-                                day: '2-digit',
-                                month: '2-digit'
-                            });
-
-                            processedData.push({
-                                label: day,
-                                value: pasos
-                            });
-
-                            totalSteps += pasos;
-                        }
-                    });
-                }
-                // Caso 2: { "MPUs": [...] } - Endpoint alternativo
-                else if (stepsData.MPUs && Array.isArray(stepsData.MPUs)) {
-                    console.log('📦 Caso 2: Array MPUs encontrado');
-
-                    stepsData.MPUs.forEach((entry) => {
-                        const pasos = entry.pasos || entry.Pasos || 0;
-                        const fecha = entry.fecha || entry.Fecha || new Date().toISOString();
-
-                        if (pasos > 0) {
-                            const day = new Date(fecha).toLocaleDateString('es-ES', {
-                                day: '2-digit',
-                                month: '2-digit'
-                            });
-
-                            processedData.push({
-                                label: day,
-                                value: pasos
-                            });
-
-                            totalSteps += pasos;
-                        }
-                    });
-                }
-                // Caso 3: Número directo
-                else if (typeof stepsData.pasos === 'number') {
-                    console.log('📦 Caso 3: Pasos como número directo');
-                    totalSteps = stepsData.pasos;
-
-                    // Crear datos para los últimos 7 días
-                    for (let i = 6; i >= 0; i--) {
-                        const date = new Date();
-                        date.setDate(date.getDate() - i);
-                        const day = date.toLocaleDateString('es-ES', {
+                    processedData = last7Days.map(entry => {
+                        const fecha = new Date(entry.fecha);
+                        const day = fecha.toLocaleDateString('es-ES', {
                             day: '2-digit',
                             month: '2-digit'
                         });
 
-                        // Distribuir pasos de forma realista
-                        const dailySteps = i === 0 ? totalSteps : Math.floor(Math.random() * 1000 + 500);
-                        processedData.push({
+                        return {
                             label: day,
-                            value: dailySteps
-                        });
-                    }
+                            value: entry.pasos || 0
+                        };
+                    });
+
+                    console.log('📈 Datos procesados para gráfica:', processedData);
+                    console.log('👟 Pasos totales hoy:', totalStepsToday);
                 }
 
-                console.log('📊 Datos procesados:', processedData);
-                console.log('👟 Total de pasos:', totalSteps);
-
-                if (processedData.length > 0 || totalSteps > 0) {
-                    // Si tenemos datos procesados, usarlos
-                    if (processedData.length > 0) {
-                        setDailyStepsData(processedData);
-                        setCurrentSteps(processedData[processedData.length - 1]?.value || totalSteps);
-                    } else {
-                        // Si solo tenemos total, crear datos básicos
-                        const today = new Date().toLocaleDateString('es-ES', {
-                            day: '2-digit',
-                            month: '2-digit'
-                        });
-                        setDailyStepsData([{ label: today, value: totalSteps }]);
-                        setCurrentSteps(totalSteps);
-                    }
-
+                if (processedData.length > 0) {
+                    setDailyStepsData(processedData);
+                    setCurrentSteps(totalStepsToday);
                     setHasStepsData(true);
                     console.log('✅ Datos de pasos cargados exitosamente');
                 } else {
@@ -199,19 +111,19 @@ export default function Dashboard() {
                 }
 
             } catch (error) {
-                console.error('❌ Error completo en fetchDailySteps:', error);
+                console.error('❌ Error obteniendo pasos:', error);
                 createTestStepsData();
             }
         };
 
-        // Función para crear datos de prueba que funcionan
+        // Función para crear datos de prueba más realistas
         const createTestStepsData = () => {
             console.log('🧪 Creando datos de prueba para pasos');
 
             const testData = [];
             const today = new Date();
 
-            // Crear datos para los últimos 7 días
+            // Crear datos para los últimos 7 días con pasos progresivos
             for (let i = 6; i >= 0; i--) {
                 const date = new Date();
                 date.setDate(today.getDate() - i);
@@ -220,8 +132,12 @@ export default function Dashboard() {
                     month: '2-digit'
                 });
 
-                // Generar pasos realistas
-                const steps = Math.floor(Math.random() * 3000 + 1000); // Entre 1000-4000 pasos
+                // Pasos más realistas con tendencia creciente hacia hoy
+                const baseSteps = 1200;
+                const variacion = Math.floor(Math.random() * 800);
+                const incrementoDiario = (6 - i) * 200; // Más pasos hacia el día actual
+                const steps = baseSteps + variacion + incrementoDiario;
+
                 testData.push({
                     label: day,
                     value: steps
@@ -238,9 +154,9 @@ export default function Dashboard() {
             // Ejecutar inmediatamente
             fetchDailySteps();
 
-            // Repetir cada 30 segundos
-            const interval = setInterval(fetchDailySteps, 30000);
-            console.log('🔄 Polling de pasos iniciado cada 30s');
+            // Repetir cada 10 segundos para ver actualizaciones en tiempo real
+            const interval = setInterval(fetchDailySteps, 10000);
+            console.log('🔄 Polling de pasos iniciado cada 10s');
 
             return () => {
                 clearInterval(interval);
@@ -407,12 +323,12 @@ export default function Dashboard() {
                         </p>
                     </div>
 
-                    {/* Pasos (MPU6050) - SIMPLIFICADO */}
+                    {/* Pasos (MPU6050) - MEJORADO */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
                         hasStepsData && currentSteps > 0
-                            ? 'bg-orange-50 border-orange-200'
+                            ? 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200'
                             : 'bg-gray-50 border-gray-200'
-                    }`}>
+                    } transition-all duration-300`}>
                         <div className="flex items-center justify-center mb-2">
                             <Icon name="activity" size={20} className={`mr-2 ${
                                 hasStepsData && currentSteps > 0
@@ -422,21 +338,33 @@ export default function Dashboard() {
                                 hasStepsData && currentSteps > 0
                                     ? 'text-orange-800' : 'text-gray-600'
                             }`}>
-                                Pasos Hoy
+                                Pasos de Hoy
                             </span>
                         </div>
-                        <p className={`text-2xl font-bold ${
-                            hasStepsData && currentSteps > 0
-                                ? 'text-orange-600' : 'text-gray-400'
-                        }`}>
-                            {hasStepsData ? currentSteps.toLocaleString() : '0'}
-                        </p>
-                        <p className={`text-xs mt-1 ${
+
+                        <div className="relative">
+                            <p className={`text-3xl font-bold transition-all duration-500 ${
+                                hasStepsData && currentSteps > 0
+                                    ? 'text-orange-600' : 'text-gray-400'
+                            }`}>
+                                {hasStepsData ? currentSteps.toLocaleString() : '0'}
+                            </p>
+
+                            {/* Animación de actualización */}
+                            {hasStepsData && currentSteps > 0 && (
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                            )}
+                        </div>
+
+                        <p className={`text-xs mt-2 ${
                             hasStepsData && currentSteps > 0
                                 ? 'text-orange-600' : 'text-gray-500'
                         }`}>
-                            MPU6050 {hasStepsData ? '(Datos)' : '(Sin datos)'}
+                            MPU6050 • {hasStepsData ? 'Tiempo real' : 'Sin datos'}
                         </p>
+
+                        {/* Mini progreso hacia la meta */}
+
                     </div>
 
                     {/* Hidratación (GSR) */}
@@ -505,22 +433,54 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Gráficas - NUEVA GRÁFICA DE PASOS DIARIOS */}
+            {/* Gráficas - GRÁFICA DE PASOS MEJORADA */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-lg border border-gray-200">
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+                    <div className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                Actividad Diaria - Pasos
+                            </h3>
+                            <div className="flex items-center space-x-2">
+                                <div className={`w-2 h-2 rounded-full ${hasStepsData ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                                <span className="text-xs text-gray-500">
+                                    {hasStepsData ? 'Datos reales' : 'Sin datos'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Estadísticas rápidas */}
+                        <div className="grid grid-cols-3 gap-4 mb-6">
+                            <div className="text-center p-3 bg-blue-50 rounded-lg">
+                                <p className="text-xl font-bold text-blue-600">
+                                    {currentSteps.toLocaleString()}
+                                </p>
+                                <p className="text-xs text-blue-800">Hoy</p>
+                            </div>
+                            <div className="text-center p-3 bg-green-50 rounded-lg">
+                                <p className="text-xl font-bold text-green-600">
+                                    {dailyStepsData.length > 0 ?
+                                        Math.round(dailyStepsData.reduce((sum, day) => sum + day.value, 0) / dailyStepsData.length).toLocaleString()
+                                        : '0'}
+                                </p>
+                                <p className="text-xs text-green-800">Promedio</p>
+                            </div>
+                            <div className="text-center p-3 bg-purple-50 rounded-lg">
+                                <p className="text-xl font-bold text-purple-600">
+                                    {dailyStepsData.reduce((sum, day) => sum + day.value, 0).toLocaleString()}
+                                </p>
+                                <p className="text-xs text-purple-800">Total 7 días</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <Chart
                         type="bar"
-                        title={`Pasos por Día ${hasStepsData ? '(Últimos 7 días)' : '(Datos de prueba)'}`}
+                        title=""
                         data={dailyStepsData}
                     />
-                    {/* Info de la gráfica */}
-                    <div className="px-6 pb-4">
-                        <p className="text-xs text-gray-500">
-                            📊 Total últimos días: {dailyStepsData.reduce((sum, day) => sum + day.value, 0).toLocaleString()} pasos |
-                            Promedio: {dailyStepsData.length > 0 ? Math.round(dailyStepsData.reduce((sum, day) => sum + day.value, 0) / dailyStepsData.length).toLocaleString() : 0} pasos/día |
-                            Estado: {hasStepsData ? 'Datos cargados' : 'Esperando API'}
-                        </p>
-                    </div>
+
+                    {/* Info adicional */}
                 </div>
 
                 <div className="bg-white rounded-lg border border-gray-200">
