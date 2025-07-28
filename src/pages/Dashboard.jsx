@@ -1,13 +1,13 @@
 // src/pages/Dashboard.jsx - CORREGIDO PARA DATOS REALES + SHORT POLLING SOLO PARA PASOS
 import { useState, useEffect } from 'react';
-import { DashboardStats } from '../components/organisms/DashboardStats';
+
 import { Chart } from '../components/molecules/Chart';
 import { useApi } from '../hooks/useApi';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { Badge } from '../components/atoms/Badge';
 import { Icon } from '../components/atoms/Icon';
 import { BodyTemperatureChart } from '../components/molecules/BodyTemperatureChart';
-import {GyroscopeRingChart} from "../components/molecules/GyroscopeRingChart.jsx";
+import { GyroscopeRingChart } from "../components/molecules/GyroscopeRingChart.jsx";
 
 export default function Dashboard() {
     const {
@@ -206,21 +206,11 @@ export default function Dashboard() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-gray-900">Dashboard VitalVest</h1>
-                <div className="flex items-center space-x-4">
-                    {/* Estado de conexiones */}
-                    <div className="flex items-center space-x-2">
-                        <Badge variant={apiConnected ? 'success' : 'danger'} size="sm">
-                            API {apiConnected ? 'Conectada' : 'Desconectada'}
-                        </Badge>
-                        <Badge variant={wsConnected ? 'success' : 'danger'} size="sm">
-                            WebSocket {wsConnected ? 'Conectado' : 'Desconectado'}
-                        </Badge>
-                    </div>
-                </div>
+
             </div>
 
             {/* Estadísticas principales */}
-            <DashboardStats stats={stats} />
+
 
             {/* DATOS EN TIEMPO REAL - COMBINANDO API Y WEBSOCKET */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -301,8 +291,8 @@ export default function Dashboard() {
                         </p>
                     </div>
 
-                    {/* Humedad */}
-                    <div className={`rounded-lng p-4 text-center border-2 ${
+                    {/* Humedad - CORREGIDO: rounded-lg en lugar de rounded-lng */}
+                    <div className={`rounded-lg p-4 text-center border-2 ${
                         isValidNumber(wsSensorData?.humedad || currentValues?.humedad_relativa)
                             ? 'bg-green-50 border-green-200'
                             : 'bg-gray-50 border-gray-200'
@@ -500,60 +490,18 @@ export default function Dashboard() {
                     Estado de Conexiones
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className={`p-4 rounded-lg border-2 ${
-                        apiConnected ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-                    }`}>
-                        <h4 className={`font-medium ${apiConnected ? 'text-green-800' : 'text-red-800'}`}>
-                            API REST
-                        </h4>
-                        <p className={`text-sm mt-1 ${apiConnected ? 'text-green-600' : 'text-red-600'}`}>
-                            {apiConnected ? '✅ Conectada y obteniendo datos' : '❌ Sin conexión'}
-                        </p>
-                        {isLoading && <p className="text-sm text-blue-600 mt-1">🔄 Cargando...</p>}
-                        {error && <p className="text-sm text-red-600 mt-1">⚠️ {error.message}</p>}
-                    </div>
 
-                    <div className={`p-4 rounded-lg border-2 ${
-                        wsConnected ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-                    }`}>
-                        <h4 className={`font-medium ${wsConnected ? 'text-green-800' : 'text-red-800'}`}>
-                            WebSocket
-                        </h4>
-                        <p className={`text-sm mt-1 ${wsConnected ? 'text-green-600' : 'text-red-600'}`}>
-                            {wsConnected ? '✅ Conectado en tiempo real' : '❌ Sin conexión'}
-                        </p>
-                        {!wsConnected && (
-                            <button
-                                onClick={reconnect}
-                                className="text-sm text-blue-600 hover:text-blue-800 mt-1"
-                            >
-                                🔄 Reconectar
-                            </button>
-                        )}
-                    </div>
+
                 </div>
 
                 {/* ✨ NUEVO: Estado del Short Polling para pasos */}
-                {apiConnected && (
-                    <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
-                        <h4 className="font-medium text-yellow-800">👟 Short Polling para Pasos</h4>
-                        <p className="text-sm text-yellow-700 mt-1">
-                            {stepsFromPolling !== null ?
-                                `✅ Activo - Último valor: ${stepsFromPolling.toLocaleString()} pasos` :
-                                '🔄 Iniciando...'}
-                        </p>
-                        <p className="text-xs text-yellow-600 mt-1">
-                            Peticiones independientes a /mpu cada 5 segundos
-                        </p>
-                    </div>
-                )}
 
+
+                {/* CORREGIDO: Componente GyroscopeRingChart sin la 'z' al final */}
                 <GyroscopeRingChart
                     data={wsSensorData}
                     isConnected={wsConnected}
-                />z
-
-
+                />
             </div>
         </div>
     );

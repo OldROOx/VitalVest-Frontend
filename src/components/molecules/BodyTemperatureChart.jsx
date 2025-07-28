@@ -355,16 +355,7 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
             </div>
 
             {/* Información del estado */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">
-                    <strong>Estado de conexión:</strong> {isConnected ? 'WebSocket activo' : 'Sin conexión'}
-                </p>
-                {temperatureHistory.length > 0 && (
-                    <p className="text-sm text-gray-600 mt-1">
-                        <strong>Lecturas:</strong> {temperatureHistory.length} puntos de datos
-                    </p>
-                )}
-            </div>
+
         </div>
     );
 };
