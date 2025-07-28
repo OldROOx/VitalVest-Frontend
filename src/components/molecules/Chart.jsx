@@ -384,13 +384,13 @@ export const Chart = ({
                     {type === 'bar' && (
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                                <span className="text-gray-500">Total esta semana:</span>
+                                <span className="text-gray-500">Total hoy:</span>
                                 <p className="font-semibold text-gray-700">
                                     {stats.totalSteps.toLocaleString()} pasos
                                 </p>
                             </div>
                             <div>
-                                <span className="text-gray-500">Promedio diario:</span>
+                                <span className="text-gray-500">Promedio por hora:</span>
                                 <p className="font-semibold text-gray-700">
                                     {stats.avgSteps.toLocaleString()} pasos
                                 </p>
@@ -422,9 +422,6 @@ export const Chart = ({
                     )}
                 </div>
             )}
-
-            {/* Estado de actualización */}
-
         </div>
     )
 }

@@ -177,8 +177,8 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
                         },
                         scales: {
                             y: {
-                                min: 35,
-                                max: 40,
+                                min: 0,
+                                max: 60,
                                 grid: {
                                     color: '#F3F4F6',
                                     drawBorder: false
@@ -353,9 +353,6 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
                     </div>
                 )}
             </div>
-
-            {/* Información del estado */}
-
         </div>
     );
 };

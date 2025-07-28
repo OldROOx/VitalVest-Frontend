@@ -669,7 +669,7 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center space-x-2">
                                                 <div className="w-3 h-3 bg-red-600 rounded-full"></div>
-                                                <span className="text-red-700 text-sm">Peligrosos (>42°C):</span>
+                                                <span className="text-red-700 text-sm">Peligrosos (&gt;42°C):</span>
                                             </div>
                                             <span className="font-semibold text-red-800">
                                                 {mlxStatsData.porcentaje_objetos_peligrosos?.toFixed(1) || '--'}%

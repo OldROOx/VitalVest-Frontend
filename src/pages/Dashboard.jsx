@@ -131,37 +131,74 @@ export default function Dashboard() {
     }, [wsSensorData, currentValues]);
 
     // ✨ MODIFICADO: Actualizar gráfica de actividad con pasos del short polling
+    // ✨ NUEVO: Short polling exclusivo para pasos - CORREGIDO PARA TU ESTRUCTURA DE DATOS
     useEffect(() => {
-        // Usar pasos del short polling si están disponibles, sino usar WebSocket/API
-        const currentSteps = stepsFromPolling !== null ? stepsFromPolling :
-            (wsSensorData?.pasos || currentValues?.pasos);
+        const fetchSteps = async () => {
+            try {
+                console.log('👟 Short polling para pasos...');
 
-        if (currentSteps !== null && currentSteps !== undefined) {
-            const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-            const today = new Date().getDay();
-            const currentDay = days[today === 0 ? 6 : today - 1];
-
-            setActivityHistory(prev => {
-                let newData = [...prev];
-
-                // Si no hay datos previos, inicializar
-                if (newData.length === 0) {
-                    newData = days.map(day => ({
-                        label: day,
-                        value: day === currentDay ? currentSteps : 0
-                    }));
-                } else {
-                    // Actualizar el día actual
-                    const existingDayIndex = newData.findIndex(d => d.label === currentDay);
-                    if (existingDayIndex >= 0) {
-                        newData[existingDayIndex].value = currentSteps;
+                const token = localStorage.getItem('token');
+                const response = await fetch('https://vivaltest-back.namixcode.cc/mpu', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
-                }
+                });
 
-                return newData;
-            });
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('📊 Respuesta completa de /mpu:', result);
+
+                    // CORREGIDO: Tu backend devuelve { "pasos": [{...}, {...}] }
+                    let totalSteps = 0;
+
+                    if (result && result.pasos && Array.isArray(result.pasos)) {
+                        console.log('📦 result.pasos es un array con', result.pasos.length, 'elementos');
+
+                        // Opción 1: Tomar el último elemento (el más reciente)
+                        if (result.pasos.length > 0) {
+                            const lastEntry = result.pasos[result.pasos.length - 1];
+                            totalSteps = lastEntry.pasos || 0;
+                            console.log('👟 Último entry:', lastEntry);
+                            console.log('👟 Pasos del último entry:', totalSteps);
+                        }
+
+                        // Opción 2: Si quieres la suma de todos los pasos
+                        // totalSteps = result.pasos.reduce((sum, entry) => sum + (entry.pasos || 0), 0);
+                        // console.log('👟 Suma total de todos los pasos:', totalSteps);
+                    } else if (result && typeof result.pasos === 'number') {
+                        // Fallback si alguna vez devuelve un número directo
+                        totalSteps = result.pasos;
+                        console.log('👟 Pasos como número directo:', totalSteps);
+                    } else {
+                        console.warn('⚠️ Estructura de datos inesperada:', result);
+                        totalSteps = 0;
+                    }
+
+                    console.log('👟 Pasos finales del short polling:', totalSteps);
+                    setStepsFromPolling(totalSteps);
+                } else {
+                    console.warn('⚠️ Error en short polling de pasos:', response.status);
+                }
+            } catch (error) {
+                console.error('❌ Error en short polling de pasos:', error);
+            }
+        };
+
+        if (apiConnected) {
+            // Ejecutar inmediatamente
+            fetchSteps();
+
+            // Short polling cada 5 segundos solo para pasos
+            const interval = setInterval(fetchSteps, 5000);
+            console.log('🔄 Short polling de pasos iniciado');
+
+            return () => {
+                clearInterval(interval);
+                console.log('⏹️ Short polling de pasos detenido');
+            };
         }
-    }, [stepsFromPolling, wsSensorData?.pasos, currentValues?.pasos]);
+    }, [apiConnected]);
 
     // Inicializar gráficas con datos por defecto si están vacías
     useEffect(() => {
