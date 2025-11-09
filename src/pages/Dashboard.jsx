@@ -255,7 +255,6 @@ export default function Dashboard() {
                             isValidNumber(wsSensorData?.temperatura || currentValues?.temperatura_ambiente)
                                 ? 'text-blue-600' : 'text-gray-500'
                         }`}>
-                            BME280
                         </p>
                     </div>
 
@@ -287,7 +286,7 @@ export default function Dashboard() {
                             isValidNumber(wsSensorData?.temperatura_objeto || currentValues?.temperatura_corporal)
                                 ? 'text-red-600' : 'text-gray-500'
                         }`}>
-                            MLX90614
+
                         </p>
                     </div>
 
@@ -486,7 +485,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-lg border border-gray-200">
                     <Chart
                         type="line"
-                        title={`Temperatura ${wsConnected ? '(WebSocket)' : apiConnected ? '(API)' : '(Sin datos)'}`}
+                        title={`Temperatura Ambiental ${wsConnected ? '(WebSocket)' : apiConnected ? '(API)' : '(Sin datos)'}`}
                         data={temperatureHistory}
                     />
                 </div>

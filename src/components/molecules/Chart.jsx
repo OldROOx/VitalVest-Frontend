@@ -228,6 +228,12 @@ export const Chart = ({
                                         color: '#6B7280',
                                         font: { size: 11 },
                                         maxTicksLimit: 10
+                                    },
+                                    title: { // AÑADIDO: Título del eje X para la gráfica de línea
+                                        display: true,
+                                        text: 'Hora',
+                                        color: '#374151',
+                                        font: { size: 13, weight: '500' }
                                     }
                                 }
                             },

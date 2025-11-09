@@ -1,23 +1,22 @@
-// src/components/organisms/Layout.jsx - ERRORES CORREGIDOS
+// src/components/organisms/Layout.jsx - CON REACT-ROUTER-DOM
 import { useState } from 'react';
+import { useLocation, NavLink } from 'react-router-dom'; // Importado
 import { Icon } from '../atoms/Icon';
 import { Button } from '../atoms/Button';
-import { NavigationItem } from '../molecules/NavigationItem';
 import { WebSocketIndicator } from '../molecules/WebSocketIndicator';
 import { useWebSocket } from '../../hooks/useWebSocket';
+// NavigationItem ya no se importa
 
-export default function Layout({ children, currentPage, onNavigate, onLogout, currentUser }) {
+export default function Layout({ children, onLogout, currentUser }) { // Eliminada prop currentPage
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const location = useLocation(); // Hook para obtener la ruta actual
 
     const { isConnected, lastMessage, reconnect } = useWebSocket();
 
     const navigation = [
-        { id: 'dashboard', name: 'Dashboard', icon: 'dashboard' },
-        { id: 'sessions', name: 'Sesiones', icon: 'sessions' },
-        { id: 'alerts', name: 'Alertas', icon: 'alerts' },
-        { id: 'configuration', name: 'Configuración', icon: 'config' },
-        { id: 'sync', name: 'Sincronización', icon: 'sync' }
+        { id: 'dashboard', name: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
+        { id: 'configuration', name: 'Configuración', icon: 'config', path: '/configuration' },
     ];
 
     // Función para alternar colapso del sidebar
@@ -75,24 +74,51 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
                     </div>
                 )}
 
-                {/* Navigation */}
+                {/* Navigation - Usando NavLink */}
                 <nav className="p-4 space-y-2">
                     {navigation.map((item) => (
                         <div key={item.id} className="relative group">
-                            <NavigationItem
-                                icon={item.icon}
-                                label={sidebarCollapsed ? '' : item.name}
-                                active={currentPage === item.id}
-                                onClick={() => onNavigate(item.id)}
-                                collapsed={sidebarCollapsed}
-                                className="transition-all duration-200"
-                            />
-                            {/* Tooltip para modo colapsado */}
-                            {sidebarCollapsed && (
-                                <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap">
-                                    {item.name}
-                                </div>
-                            )}
+                            {/* Reemplazamos NavigationItem por NavLink para manejar la ruta */}
+                            <NavLink
+                                to={item.path}
+                                className={({ isActive }) =>
+                                    `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 relative group nav-item w-full text-left ${
+                                        sidebarCollapsed ? 'justify-center px-2' : ''
+                                    } ${isActive
+                                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700 shadow-sm'
+                                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                                    }`
+                                }
+                                title={sidebarCollapsed ? item.name : ''}
+                                aria-label={item.name}
+                            >
+                                {({ isActive }) => (
+                                    <>
+                                        <Icon
+                                            name={item.icon}
+                                            size={20}
+                                            className={`${sidebarCollapsed ? '' : 'mr-3'} transition-colors duration-200 ${
+                                                isActive ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'
+                                            }`}
+                                        />
+                                        {!sidebarCollapsed && (
+                                            <span className="transition-opacity duration-200 truncate">
+                                                {item.name}
+                                            </span>
+                                        )}
+                                        {/* Indicador de estado activo para modo colapsado */}
+                                        {sidebarCollapsed && isActive && (
+                                            <div className="absolute -right-1 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-l"></div>
+                                        )}
+                                        {/* Tooltip para modo colapsado */}
+                                        {sidebarCollapsed && (
+                                            <div className="sidebar-tooltip">
+                                                {item.name}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </NavLink>
                         </div>
                     ))}
                 </nav>
@@ -173,13 +199,7 @@ export default function Layout({ children, currentPage, onNavigate, onLogout, cu
 
                         {/* WebSocket status en el header (visible en móvil) */}
                         <div className="flex items-center space-x-4">
-                            <div className="lg:hidden">
-                                <WebSocketIndicator
-                                    isConnected={isConnected}
-                                    lastMessage={lastMessage}
-                                    onReconnect={reconnect}
-                                />
-                            </div>
+                            {/* SECCIÓN ELIMINADA */}
                         </div>
                     </div>
                 </header>

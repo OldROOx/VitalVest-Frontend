@@ -310,7 +310,7 @@ export const BodyTemperatureChart = ({ data, isConnected }) => {
         <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                    Temperatura Corporal (MLX90614)
+                    Temperatura Corporal
                 </h3>
                 <div className={`px-3 py-1 rounded-full text-sm font-medium ${stats.statusColor}`}>
                     {stats.status}

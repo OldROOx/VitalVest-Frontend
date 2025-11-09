@@ -263,7 +263,7 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
         <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                    Distribución de Actividad - MPU6050
+                    Distribución de Actividad
                 </h3>
                 <div className="flex items-center space-x-2">
                     <div className={`w-2 h-2 rounded-full ${

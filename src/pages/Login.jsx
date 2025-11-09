@@ -17,12 +17,20 @@ export default function Login({ onLogin }) {
 
         // Validaciones básicas
         const newErrors = {}
+
+        // --- INICIO: VALIDACIÓN DE 8 CARACTERES ---
         if (!formData.email.trim()) {
-            newErrors.email = 'El email es requerido'
+            newErrors.email = 'El usuario es requerido'
+        } else if (formData.email.trim().length > 8) {
+            newErrors.email = 'El usuario no puede tener más de 8 caracteres';
         }
+
         if (!formData.password.trim()) {
             newErrors.password = 'La contraseña es requerida'
+        } else if (formData.password.trim().length > 8) {
+            newErrors.password = 'La contraseña no puede tener más de 8 caracteres';
         }
+        // --- FIN: VALIDACIÓN DE 8 CARACTERES ---
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors)
@@ -93,21 +101,23 @@ export default function Login({ onLogin }) {
                         <FormField
                             label="Usuario / Email"
                             type="text"
-                            placeholder="Ingresa tu usuario"
+                            placeholder="Ingresa tu usuario (máx 8 caracteres)"
                             value={formData.email}
                             onChange={handleChange('email')}
                             error={errors.email}
                             required
+                            maxLength={8} // LÍMITE DE ENTRADA EN EL NAVEGADOR
                         />
 
                         <FormField
                             label="Contraseña"
                             type="password"
-                            placeholder="••••••••"
+                            placeholder="•••••••• (máx 8 caracteres)"
                             value={formData.password}
                             onChange={handleChange('password')}
                             error={errors.password}
                             required
+                            maxLength={8} // LÍMITE DE ENTRADA EN EL NAVEGADOR
                         />
 
                         <Button
@@ -120,12 +130,6 @@ export default function Login({ onLogin }) {
                             {isLoading ? 'Verificando...' : 'Ingresar al Sistema'}
                         </Button>
                     </form>
-
-                    <div className="mt-6 text-center">
-                        <p className="text-xs text-gray-500">
-                            Conectado a: localhost:8080
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>
