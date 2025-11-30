@@ -1,5 +1,6 @@
+// src/App.jsx - ACTUALIZADO
 import { useState, useEffect } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom' // Importado
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import './App.css'
 
 // Components
@@ -13,69 +14,114 @@ import Layout from './components/organisms/Layout'
 // Services
 import { authService } from './services/authService'
 
+// ✨ NUEVO: Hook de Shared Worker
+import { useSharedWorker } from './hooks/useSharedWorker'
+
 function App() {
-    // Eliminamos currentPage y onNavigate
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [currentUser, setCurrentUser] = useState(null)
-    const navigate = useNavigate(); // Hook para manejar la navegación programática
+    const navigate = useNavigate()
 
-    // Verificar si el usuario ya está autenticado al cargar la app
+    // ✨ NUEVO: Inicializar Shared Worker
+    const {
+        isConnected: workerConnected,
+        wsConnected,
+        apiPolling,
+        sensorData,
+        apiData,
+        startWebSocket,
+        startApiPolling,
+        updateAuthToken,
+        workerStats
+    } = useSharedWorker()
+
+    // Verificar autenticación al cargar
     useEffect(() => {
         const authenticated = authService.isAuthenticated()
         const user = authService.getCurrentUser()
+        const token = authService.getToken()
 
-        if (authenticated && user) {
+        if (authenticated && user && token) {
             setIsAuthenticated(true)
             setCurrentUser(user)
+
+            // ✨ NUEVO: Actualizar token en Shared Worker
+            updateAuthToken(token)
         }
-    }, [])
+    }, [updateAuthToken])
+
+    // ✨ NUEVO: Iniciar servicios cuando esté autenticado
+    useEffect(() => {
+        if (isAuthenticated && workerConnected) {
+            console.log('🚀 Iniciando servicios en Shared Worker...')
+            startWebSocket()
+            startApiPolling(3000)
+        }
+    }, [isAuthenticated, workerConnected, startWebSocket, startApiPolling])
 
     const handleLogin = () => {
         const user = authService.getCurrentUser()
+        const token = authService.getToken()
+
         setIsAuthenticated(true)
         setCurrentUser(user)
-        navigate('/dashboard'); // Redirige al Dashboard después del login
+
+        // ✨ NUEVO: Actualizar token en worker
+        if (token) {
+            updateAuthToken(token)
+        }
+
+        navigate('/dashboard')
     }
 
     const handleLogout = () => {
         authService.logout()
         setIsAuthenticated(false)
         setCurrentUser(null)
-        navigate('/login'); // Redirige al Login después del logout
+        navigate('/login')
     }
 
     // Componente wrapper para rutas protegidas
     const ProtectedRoute = ({ element: Element, ...rest }) => {
         return isAuthenticated ? (
-            <Layout onLogout={handleLogout} currentUser={currentUser}>
+            <Layout
+                onLogout={handleLogout}
+                currentUser={currentUser}
+                workerStats={workerStats} // ✨ NUEVO: Pasar stats del worker
+            >
                 <Element />
             </Layout>
         ) : (
             <Navigate to="/login" replace />
-        );
-    };
+        )
+    }
 
-    // La página de Login ya no necesita Layout
     if (!isAuthenticated) {
         return (
             <Routes>
                 <Route path="/login" element={<Login onLogin={handleLogin} />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
-        );
+        )
     }
 
-    // Una vez autenticado, usamos Routes y ProtectedRoute
     return (
         <div className="w-full h-screen layout-container">
+            {/* ✨ NUEVO: Indicador de Shared Worker */}
+            {workerConnected && (
+                <div className="fixed bottom-4 right-4 z-50">
+                    <div className="bg-green-100 border border-green-400 text-green-800 px-3 py-2 rounded-lg shadow-lg text-xs flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span>Shared Worker Activo</span>
+                        <span className="font-mono">({workerStats.connections} tabs)</span>
+                    </div>
+                </div>
+            )}
+
             <Routes>
                 <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-
-                {/* Rutas Protegidas que usan el Layout */}
                 <Route path="/dashboard" element={<ProtectedRoute element={Dashboard} />} />
                 <Route path="/configuration" element={<ProtectedRoute element={Configuration} />} />
-
-                {/* Redireccionar la ruta raíz y cualquier otra a Dashboard */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
