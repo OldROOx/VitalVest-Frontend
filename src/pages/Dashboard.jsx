@@ -1,35 +1,59 @@
-// src/pages/Dashboard.jsx - ACTUALIZADO PARA USAR SHARED WORKER
+// src/pages/Dashboard.jsx - FIX PARA MOSTRAR DATOS DEL WEBSOCKET
 import { useState, useEffect } from 'react';
 import { Chart } from '../components/molecules/Chart';
-import { useSharedWorker } from '../hooks/useSharedWorker'; // ✨ NUEVO
+import { useWebSocket } from '../hooks/useWebSocket'; // ✅ USAR WEBSOCKET DIRECTAMENTE
+import { useApi } from '../hooks/useApi'; // Para datos históricos
 import { Badge } from '../components/atoms/Badge';
 import { Icon } from '../components/atoms/Icon';
 import { BodyTemperatureChart } from '../components/molecules/BodyTemperatureChart';
 import { GyroscopeRingChart } from "../components/molecules/GyroscopeRingChart.jsx";
 
 export default function Dashboard() {
-    // ✨ NUEVO: Usar Shared Worker en lugar de hooks individuales
+    // ✅ USAR WEBSOCKET DIRECTAMENTE
     const {
-        wsConnected,
-        apiPolling,
-        sensorData,
-        apiData,
-        currentValues,
-        workerStats,
-        hasValidData
-    } = useSharedWorker();
+        isConnected: wsConnected,
+        sensorData: wsSensorData,
+        reconnect
+    } = useWebSocket();
+
+    // API solo para datos históricos
+    const {
+        isConnected: apiConnected,
+        currentValues: apiCurrentValues
+    } = useApi({
+        autoStart: true,
+        pollingInterval: 3000
+    });
 
     const [temperatureHistory, setTemperatureHistory] = useState([]);
     const [dailyStepsData, setDailyStepsData] = useState([]);
     const [currentSteps, setCurrentSteps] = useState(0);
     const [hasStepsData, setHasStepsData] = useState(false);
 
+    // ✅ USAR DATOS DEL WEBSOCKET PRIMERO, API COMO FALLBACK
+    const currentValues = {
+        temperatura_ambiente: wsSensorData.temperatura || apiCurrentValues?.temperatura_ambiente || null,
+        temperatura_corporal: wsSensorData.temperatura_objeto || apiCurrentValues?.temperatura_corporal || null,
+        humedad_relativa: wsSensorData.humedad || apiCurrentValues?.humedad_relativa || null,
+        presion: wsSensorData.presion || apiCurrentValues?.presion || null,
+        pasos: wsSensorData.pasos !== null ? wsSensorData.pasos : (apiCurrentValues?.pasos || null),
+        porcentaje: wsSensorData.porcentaje || apiCurrentValues?.porcentaje || null,
+        conductancia: wsSensorData.conductancia || apiCurrentValues?.conductancia || null,
+        estado_hidratacion: wsSensorData.estado_hidratacion || apiCurrentValues?.estado_hidratacion || null
+    };
+
+    // Log para debug
+    useEffect(() => {
+        console.log('🔍 Dashboard - Datos actuales:', {
+            wsConnected,
+            wsSensorData,
+            currentValues
+        });
+    }, [wsSensorData, currentValues]);
+
     // Actualizar gráfica de temperatura
     useEffect(() => {
-        const currentTemp = sensorData?.mlx90614?.temp_objeto ||
-            sensorData?.bme280?.temperatura ||
-            currentValues?.temperatura_corporal ||
-            currentValues?.temperatura_ambiente;
+        const currentTemp = currentValues.temperatura_corporal || currentValues.temperatura_ambiente;
 
         if (currentTemp !== null && currentTemp !== undefined) {
             setTemperatureHistory(prev => {
@@ -48,14 +72,14 @@ export default function Dashboard() {
                 return newData.slice(-20);
             });
         }
-    }, [sensorData, currentValues]);
+    }, [currentValues.temperatura_corporal, currentValues.temperatura_ambiente]);
 
     // Obtener datos de pasos de la API
     useEffect(() => {
         const fetchDailySteps = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch('https://vivaltest-back.namixcode.cc/mpu', {
+                const response = await fetch('http://100.30.168.141:8080/mpu', {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -69,8 +93,8 @@ export default function Dashboard() {
 
                 const result = await response.json();
 
-                if (result.pasos && Array.isArray(result.pasos)) {
-                    const sortedData = result.pasos.sort((a, b) =>
+                if (result.MPU && Array.isArray(result.MPU)) {
+                    const sortedData = result.MPU.sort((a, b) =>
                         new Date(b.fecha) - new Date(a.fecha)
                     );
 
@@ -118,12 +142,12 @@ export default function Dashboard() {
             setHasStepsData(true);
         };
 
-        if (apiPolling) {
+        if (apiConnected) {
             fetchDailySteps();
             const interval = setInterval(fetchDailySteps, 10000);
             return () => clearInterval(interval);
         }
-    }, [apiPolling]);
+    }, [apiConnected]);
 
     // Helpers
     const isValidNumber = (value) => {
@@ -139,26 +163,8 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-gray-900">Dashboard VitalVest</h1>
 
-                {/* ✨ NUEVO: Indicador de estado del Shared Worker */}
-                <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg border border-gray-200">
-                        <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                        <span className="text-sm font-medium">
-                            {wsConnected ? 'WebSocket' : 'Desconectado'}
-                        </span>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg border border-gray-200">
-                        <div className={`w-2 h-2 rounded-full ${apiPolling ? 'bg-blue-500 animate-pulse' : 'bg-gray-400'}`}></div>
-                        <span className="text-sm font-medium">
-                            {apiPolling ? 'API Polling' : 'Pausado'}
-                        </span>
-                    </div>
-                    {workerStats.connections > 1 && (
-                        <Badge variant="success" size="sm">
-                            {workerStats.connections} pestañas sincronizadas
-                        </Badge>
-                    )}
-                </div>
+                {/* Estado de conexiones */}
+
             </div>
 
             {/* DATOS EN TIEMPO REAL */}
@@ -168,174 +174,173 @@ export default function Dashboard() {
                         Datos en Tiempo Real
                     </h3>
                     <div className="text-xs text-gray-500">
-                        Última actualización: {workerStats.lastUpdate ?
-                        new Date(workerStats.lastUpdate).toLocaleTimeString() : 'N/A'}
+                        Fuente: {wsConnected ? 'WebSocket' : apiConnected ? 'API REST' : 'Sin conexión'}
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     {/* Temperatura Ambiente */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
-                        isValidNumber(currentValues?.temperatura_ambiente)
+                        isValidNumber(currentValues.temperatura_ambiente)
                             ? 'bg-blue-50 border-blue-200'
                             : 'bg-gray-50 border-gray-200'
                     }`}>
                         <div className="flex items-center justify-center mb-2">
                             <Icon name="thermometer" size={20} className={`mr-2 ${
-                                isValidNumber(currentValues?.temperatura_ambiente)
+                                isValidNumber(currentValues.temperatura_ambiente)
                                     ? 'text-blue-600' : 'text-gray-400'
                             }`} />
                             <span className={`text-sm font-medium ${
-                                isValidNumber(currentValues?.temperatura_ambiente)
+                                isValidNumber(currentValues.temperatura_ambiente)
                                     ? 'text-blue-800' : 'text-gray-600'
                             }`}>
                                 Temp. Ambiente
                             </span>
                         </div>
                         <p className={`text-2xl font-bold ${
-                            isValidNumber(currentValues?.temperatura_ambiente)
+                            isValidNumber(currentValues.temperatura_ambiente)
                                 ? 'text-blue-600' : 'text-gray-400'
                         }`}>
-                            {formatValue(currentValues?.temperatura_ambiente)}°C
+                            {formatValue(currentValues.temperatura_ambiente)}°C
                         </p>
                     </div>
 
                     {/* Temperatura Corporal */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
-                        isValidNumber(currentValues?.temperatura_corporal)
+                        isValidNumber(currentValues.temperatura_corporal)
                             ? 'bg-red-50 border-red-200'
                             : 'bg-gray-50 border-gray-200'
                     }`}>
                         <div className="flex items-center justify-center mb-2">
                             <Icon name="heart" size={20} className={`mr-2 ${
-                                isValidNumber(currentValues?.temperatura_corporal)
+                                isValidNumber(currentValues.temperatura_corporal)
                                     ? 'text-red-600' : 'text-gray-400'
                             }`} />
                             <span className={`text-sm font-medium ${
-                                isValidNumber(currentValues?.temperatura_corporal)
+                                isValidNumber(currentValues.temperatura_corporal)
                                     ? 'text-red-800' : 'text-gray-600'
                             }`}>
                                 Temp. Corporal
                             </span>
                         </div>
                         <p className={`text-2xl font-bold ${
-                            isValidNumber(currentValues?.temperatura_corporal)
+                            isValidNumber(currentValues.temperatura_corporal)
                                 ? 'text-red-600' : 'text-gray-400'
                         }`}>
-                            {formatValue(currentValues?.temperatura_corporal)}°C
+                            {formatValue(currentValues.temperatura_corporal)}°C
                         </p>
                     </div>
 
                     {/* Humedad */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
-                        isValidNumber(currentValues?.humedad_relativa)
+                        isValidNumber(currentValues.humedad_relativa)
                             ? 'bg-green-50 border-green-200'
                             : 'bg-gray-50 border-gray-200'
                     }`}>
                         <div className="flex items-center justify-center mb-2">
                             <Icon name="droplet" size={20} className={`mr-2 ${
-                                isValidNumber(currentValues?.humedad_relativa)
+                                isValidNumber(currentValues.humedad_relativa)
                                     ? 'text-green-600' : 'text-gray-400'
                             }`} />
                             <span className={`text-sm font-medium ${
-                                isValidNumber(currentValues?.humedad_relativa)
+                                isValidNumber(currentValues.humedad_relativa)
                                     ? 'text-green-800' : 'text-gray-600'
                             }`}>
                                 Humedad
                             </span>
                         </div>
                         <p className={`text-2xl font-bold ${
-                            isValidNumber(currentValues?.humedad_relativa)
+                            isValidNumber(currentValues.humedad_relativa)
                                 ? 'text-green-600' : 'text-gray-400'
                         }`}>
-                            {formatValue(currentValues?.humedad_relativa)}%
+                            {formatValue(currentValues.humedad_relativa)}%
                         </p>
                     </div>
 
                     {/* Pasos */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
-                        hasStepsData && currentSteps > 0
+                        isValidNumber(currentValues.pasos) || currentValues.pasos === 0
                             ? 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200'
                             : 'bg-gray-50 border-gray-200'
                     } transition-all duration-300`}>
                         <div className="flex items-center justify-center mb-2">
                             <Icon name="activity" size={20} className={`mr-2 ${
-                                hasStepsData && currentSteps > 0
+                                isValidNumber(currentValues.pasos) || currentValues.pasos === 0
                                     ? 'text-orange-600' : 'text-gray-400'
                             }`} />
                             <span className={`text-sm font-medium ${
-                                hasStepsData && currentSteps > 0
+                                isValidNumber(currentValues.pasos) || currentValues.pasos === 0
                                     ? 'text-orange-800' : 'text-gray-600'
                             }`}>
                                 Pasos de Hoy
                             </span>
                         </div>
                         <p className={`text-3xl font-bold ${
-                            hasStepsData && currentSteps > 0
+                            isValidNumber(currentValues.pasos) || currentValues.pasos === 0
                                 ? 'text-orange-600' : 'text-gray-400'
                         }`}>
-                            {hasStepsData ? currentSteps.toLocaleString() : '0'}
+                            {currentValues.pasos !== null ? currentValues.pasos : '0'}
                         </p>
                     </div>
 
                     {/* Hidratación */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
-                        isValidNumber(currentValues?.porcentaje)
+                        isValidNumber(currentValues.porcentaje)
                             ? 'bg-indigo-50 border-indigo-200'
                             : 'bg-gray-50 border-gray-200'
                     }`}>
                         <div className="flex items-center justify-center mb-2">
                             <Icon name="droplet" size={20} className={`mr-2 ${
-                                isValidNumber(currentValues?.porcentaje)
+                                isValidNumber(currentValues.porcentaje)
                                     ? 'text-indigo-600' : 'text-gray-400'
                             }`} />
                             <span className={`text-sm font-medium ${
-                                isValidNumber(currentValues?.porcentaje)
+                                isValidNumber(currentValues.porcentaje)
                                     ? 'text-indigo-800' : 'text-gray-600'
                             }`}>
                                 Hidratación
                             </span>
                         </div>
                         <p className={`text-2xl font-bold ${
-                            isValidNumber(currentValues?.porcentaje)
+                            isValidNumber(currentValues.porcentaje)
                                 ? 'text-indigo-600' : 'text-gray-400'
                         }`}>
-                            {formatValue(currentValues?.porcentaje, 0)}%
+                            {formatValue(currentValues.porcentaje, 0)}%
                         </p>
                         <p className={`text-xs mt-1 ${
-                            isValidNumber(currentValues?.porcentaje)
+                            isValidNumber(currentValues.porcentaje)
                                 ? 'text-indigo-600' : 'text-gray-500'
                         }`}>
-                            {currentValues?.estado_hidratacion || 'GSR'}
+                            {currentValues.estado_hidratacion || 'GSR'}
                         </p>
                     </div>
 
                     {/* Presión */}
                     <div className={`rounded-lg p-4 text-center border-2 ${
-                        isValidNumber(currentValues?.presion)
+                        isValidNumber(currentValues.presion)
                             ? 'bg-purple-50 border-purple-200'
                             : 'bg-gray-50 border-gray-200'
                     }`}>
                         <div className="flex items-center justify-center mb-2">
                             <Icon name="activity" size={20} className={`mr-2 ${
-                                isValidNumber(currentValues?.presion)
+                                isValidNumber(currentValues.presion)
                                     ? 'text-purple-600' : 'text-gray-400'
                             }`} />
                             <span className={`text-sm font-medium ${
-                                isValidNumber(currentValues?.presion)
+                                isValidNumber(currentValues.presion)
                                     ? 'text-purple-800' : 'text-gray-600'
                             }`}>
                                 Presión
                             </span>
                         </div>
                         <p className={`text-2xl font-bold ${
-                            isValidNumber(currentValues?.presion)
+                            isValidNumber(currentValues.presion)
                                 ? 'text-purple-600' : 'text-gray-400'
                         }`}>
-                            {formatValue(currentValues?.presion, 0)}
+                            {formatValue(currentValues.presion, 0)}
                         </p>
                         <p className={`text-xs mt-1 ${
-                            isValidNumber(currentValues?.presion)
+                            isValidNumber(currentValues.presion)
                                 ? 'text-purple-600' : 'text-gray-500'
                         }`}>
                             hPa
@@ -364,12 +369,12 @@ export default function Dashboard() {
             </div>
 
             <BodyTemperatureChart
-                data={currentValues?.temperatura_corporal}
-                isConnected={wsConnected || apiPolling}
+                data={currentValues.temperatura_corporal}
+                isConnected={wsConnected || apiConnected}
             />
 
             <GyroscopeRingChart
-                data={sensorData}
+                data={wsSensorData}
                 isConnected={wsConnected}
             />
         </div>

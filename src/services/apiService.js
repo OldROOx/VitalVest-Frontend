@@ -1,4 +1,4 @@
-// src/services/apiService.js - ACTUALIZADO PARA SUDORACIÓN
+// src/services/apiService.js - CORREGIDO PARA HIDRATACIÓN
 const API_BASE_URL = 'http://100.30.168.141:8080';
 
 class ApiService {
@@ -13,7 +13,6 @@ class ApiService {
         this.lastData = null;
     }
 
-    // Métodos para registrar callbacks
     onData(callback) {
         this.callbacks.onData.push(callback);
     }
@@ -26,7 +25,6 @@ class ApiService {
         this.callbacks.onConnection.push(callback);
     }
 
-    // Obtener token de autorización
     getAuthHeaders() {
         const token = localStorage.getItem('token');
         const headers = {
@@ -40,23 +38,19 @@ class ApiService {
         return headers;
     }
 
-    // Iniciar polling automático
     startPolling(intervalMs = 3000) {
         if (this.isPolling) return;
 
         this.isPolling = true;
         console.log('🚀 Iniciando polling de API cada', intervalMs, 'ms');
 
-        // Obtener datos inmediatamente
         this.fetchAllData();
 
-        // Configurar intervalo
         this.pollingInterval = setInterval(() => {
             this.fetchAllData();
         }, intervalMs);
     }
 
-    // Detener polling
     stopPolling() {
         if (this.pollingInterval) {
             clearInterval(this.pollingInterval);
@@ -66,7 +60,6 @@ class ApiService {
         console.log('⏹️ Polling de API detenido');
     }
 
-    // Obtener todos los datos
     async fetchAllData() {
         try {
             const [sensorData, users] = await Promise.all([
@@ -98,7 +91,6 @@ class ApiService {
         }
     }
 
-    // Obtener datos de todos los sensores
     async getAllSensorData() {
         try {
             const [bmeData, gsrData, mlxData, mpuData] = await Promise.allSettled([
@@ -120,7 +112,6 @@ class ApiService {
         }
     }
 
-    // BME280
     async getBMEData() {
         try {
             const response = await fetch(`${API_BASE_URL}/bme`, {
@@ -144,7 +135,6 @@ class ApiService {
         }
     }
 
-    // GSR - ACTUALIZADO PARA SUDORACIÓN
     async getGSRData() {
         try {
             const response = await fetch(`${API_BASE_URL}/gsr`, {
@@ -168,7 +158,6 @@ class ApiService {
         }
     }
 
-    // MLX90614
     async getMLXData() {
         try {
             const response = await fetch(`${API_BASE_URL}/mlx`, {
@@ -192,7 +181,6 @@ class ApiService {
         }
     }
 
-    // MPU6050
     async getMPUData() {
         try {
             const response = await fetch(`${API_BASE_URL}/mpu`, {
@@ -216,7 +204,6 @@ class ApiService {
         }
     }
 
-    // Usuarios
     async getUsers() {
         try {
             const response = await fetch(`${API_BASE_URL}/users`, {
@@ -240,11 +227,9 @@ class ApiService {
         }
     }
 
-    // Transformar datos según tu estructura
     transformSensorData(sensorData) {
         const { BME, GSR, MLX, MPU } = sensorData;
 
-        // Obtener el último valor de cada sensor
         const latestBME = BME && BME.length > 0 ? BME[BME.length - 1] : null;
         const latestGSR = GSR && GSR.length > 0 ? GSR[GSR.length - 1] : null;
         const latestMLX = MLX && MLX.length > 0 ? MLX[MLX.length - 1] : null;
@@ -257,18 +242,16 @@ class ApiService {
             latestMPU
         });
 
-        // FIX: Determinar si GSR usa porcentaje o conductancia
+        // Determinar si GSR usa porcentaje o conductancia
         let gsrConductancia = null;
         let gsrPorcentaje = null;
 
         if (latestGSR) {
             if (latestGSR.porcentaje !== undefined && latestGSR.porcentaje !== null) {
-                // La API envía porcentaje
                 gsrPorcentaje = latestGSR.porcentaje;
-                gsrConductancia = latestGSR.porcentaje / 100; // Convertir a decimal para compatibilidad
+                gsrConductancia = latestGSR.porcentaje / 100;
                 console.log('🔧 GSR usando porcentaje:', gsrPorcentaje, '-> conductancia:', gsrConductancia);
             } else if (latestGSR.conductancia !== undefined && latestGSR.conductancia !== null) {
-                // Fallback a conductancia si existe
                 gsrConductancia = latestGSR.conductancia;
                 gsrPorcentaje = latestGSR.conductancia * 100;
                 console.log('🔧 GSR usando conductancia:', gsrConductancia, '-> porcentaje:', gsrPorcentaje);
@@ -282,9 +265,9 @@ class ApiService {
                 humedad_relativa: latestBME?.humedad || null,
                 presion: latestBME?.presion || null,
 
-                // GSR - FIX: Manejar tanto porcentaje como conductancia
+                // GSR - Hidratación
                 conductancia: gsrConductancia,
-                porcentaje: gsrPorcentaje, // Nuevo campo
+                porcentaje: gsrPorcentaje,
                 estado_hidratacion: latestGSR?.estado_hidratacion || null,
 
                 // MLX90614
@@ -305,30 +288,24 @@ class ApiService {
         };
     }
 
-    // Calcular estadísticas
     calculateStats(sensorData) {
         const { BME, GSR, MLX, MPU } = sensorData;
 
-        // Estadísticas de temperatura corporal
         const mlxTemps = MLX?.map(d => d.temperatura_objeto).filter(t => t != null) || [];
         const avgBodyTemp = mlxTemps.length > 0 ?
             mlxTemps.reduce((a, b) => a + b, 0) / mlxTemps.length : null;
 
-        // Estadísticas de pasos
         const totalSteps = MPU?.reduce((total, d) => total + (d.pasos || 0), 0) || 0;
 
-        // Estadísticas de temperatura ambiente
         const bmeTemps = BME?.map(d => d.temperatura).filter(t => t != null) || [];
         const avgAmbientTemp = bmeTemps.length > 0 ?
             bmeTemps.reduce((a, b) => a + b, 0) / bmeTemps.length : null;
 
-        // FIX: Estadísticas de GSR (compatible con conductancia o porcentaje)
         const gsrValues = GSR?.map(d => {
-            // Priorizar porcentaje si existe, sino usar conductancia
             if (d.porcentaje !== undefined && d.porcentaje !== null) {
                 return d.porcentaje;
             } else if (d.conductancia !== undefined && d.conductancia !== null) {
-                return d.conductancia * 100; // Convertir conductancia a porcentaje
+                return d.conductancia * 100;
             }
             return null;
         }).filter(c => c != null) || [];
@@ -337,7 +314,7 @@ class ApiService {
             gsrValues.reduce((a, b) => a + b, 0) / gsrValues.length : null;
 
         console.log('📊 GSR Stats calculadas:', {
-            valores_raw: GSR?.slice(-3), // Últimos 3 valores para debug
+            valores_raw: GSR?.slice(-3),
             valores_procesados: gsrValues.slice(-3),
             promedio: avgHydration
         });
@@ -367,7 +344,6 @@ class ApiService {
         };
     }
 
-    // Crear nuevos registros
     async createBME(data) {
         try {
             const response = await fetch(`${API_BASE_URL}/bme`, {
@@ -444,7 +420,6 @@ class ApiService {
         }
     }
 
-    // Verificar estado del servidor
     async checkServerStatus() {
         try {
             const response = await fetch(`${API_BASE_URL}/ws-status`);

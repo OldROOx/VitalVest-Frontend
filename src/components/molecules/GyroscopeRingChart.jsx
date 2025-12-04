@@ -37,9 +37,9 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
 
             // FIX: URLs CORRECTAS según tu documentación
             const [mpuResponse, bmeResponse, mlxResponse] = await Promise.allSettled([
-                fetch('http://75.101.239.21:8000/mpu6050/estadisticas', { headers }),
-                fetch('http://75.101.239.21:8000/bme280/estadisticas', { headers }),
-                fetch('http://75.101.239.21:8000/mlx/estadisticas', { headers }) // FIX: URL correcta
+                fetch('http://44.206.102.226:8000/mpu6050/estadisticas', { headers }),
+                fetch('http://44.206.102.226:8000/bme280/estadisticas', { headers }),
+                fetch('http://44.206.102.226:8000/mlx/estadisticas', { headers }) // FIX: URL correcta
             ]);
 
             // Procesar MPU6050

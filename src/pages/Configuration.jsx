@@ -1,4 +1,4 @@
-// src/pages/Configuration.jsx - ACTUALIZADO PARA SUDORACIÓN
+// src/pages/Configuration.jsx - CORREGIDO PARA HIDRATACIÓN
 import { SensorPanel } from '../components/organisms/SensorPanel'
 import { useApi } from '../hooks/useApi'
 import { useWebSocket } from '../hooks/useWebSocket'
@@ -7,12 +7,9 @@ import { Icon } from '../components/atoms/Icon'
 import { Button } from '../components/atoms/Button'
 
 export default function Configuration() {
-    // Se eliminan userSelection y connectionMode y sus hooks de estado (useState)
-
     const {
         isConnected: apiConnected,
         currentValues,
-        // Se eliminan users, startPolling y stopPolling, ya que ya no se usan
     } = useApi({
         autoStart: true,
         pollingInterval: 3000
@@ -25,7 +22,7 @@ export default function Configuration() {
         getConnectionStats
     } = useWebSocket();
 
-    // Configuración de sensores basada en datos reales - ACTUALIZADO PARA SUDORACIÓN
+    // Configuración de sensores basada en datos reales
     const sensors = [
         {
             id: 1,
@@ -38,10 +35,10 @@ export default function Configuration() {
         },
         {
             id: 2,
-            name: 'Sensor GSR (Sudoración)', // CAMBIADO: Hidratación → Sudoración
-            status: (wsSensorData?.porcentaje !== null || currentValues?.porcentaje !== null) ? 'Activo' : 'Inactivo', // CAMBIADO: conductancia → porcentaje
+            name: 'Sensor GSR (Hidratación)',
+            status: (wsSensorData?.porcentaje !== null || currentValues?.porcentaje !== null) ? 'Activo' : 'Inactivo',
             lastReading: (wsSensorData?.porcentaje || currentValues?.porcentaje) ?
-                `${(wsSensorData?.porcentaje || currentValues?.porcentaje)?.toFixed(1)}% - ${wsSensorData?.estado_sudoracion || currentValues?.estado_sudoracion || 'Estado desconocido'}` : // CAMBIADO
+                `${(wsSensorData?.porcentaje || currentValues?.porcentaje)?.toFixed(1)}% - ${wsSensorData?.estado_hidratacion || currentValues?.estado_hidratacion || 'Estado desconocido'}` :
                 'Sin datos',
             icon: 'droplet'
         },
@@ -65,7 +62,6 @@ export default function Configuration() {
         }
     ]
 
-    // Se elimina handleAssignUser y handleToggleConnection
     const handleWebSocketReconnect = () => {
         wsReconnect()
         alert('Intentando reconectar WebSocket...')
@@ -79,18 +75,13 @@ export default function Configuration() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-gray-900">Configuración del Chaleco</h1>
-                <p className="text-sm text-gray-500">Gestión de usuarios, sensores y conectividad</p>
+                <p className="text-sm text-gray-500">Gestión de sensores y conectividad</p>
             </div>
-
-            {/* Estado de Conexiones - SECCIÓN ELIMINADA */}
-
-            {/* User Selection - SECCIÓN ELIMINADA */}
-            {/* Connection Mode - SECCIÓN ELIMINADA */}
 
             {/* Sensor Status */}
             <SensorPanel sensors={sensors} />
 
-            {/* Real-time Sensor Data Preview - ACTUALIZADO PARA SUDORACIÓN */}
+            {/* Real-time Sensor Data Preview */}
             {(hasValidApiData || hasValidWsData) && (
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -120,18 +111,23 @@ export default function Configuration() {
                             </div>
                         )}
 
-                        {/* GSR - ACTUALIZADO PARA SUDORACIÓN */}
-                        {((wsSensorData?.porcentaje !== null || wsSensorData?.estado_sudoracion) ||
-                            (currentValues?.porcentaje !== null || currentValues?.estado_sudoracion)) && (
+                        {/* GSR - Hidratación */}
+                        {((wsSensorData?.porcentaje !== null || wsSensorData?.estado_hidratacion) ||
+                            (currentValues?.porcentaje !== null || currentValues?.estado_hidratacion)) && (
                             <div className="bg-green-50 p-4 rounded-lg">
-                                <h4 className="font-medium text-green-900">GSR (Sudoración)</h4>
+                                <h4 className="font-medium text-green-900">GSR (Hidratación)</h4>
                                 <div className="space-y-1 mt-2">
                                     <p className="text-sm text-green-700">
-                                        Porcentaje: {(wsSensorData?.porcentaje || currentValues?.porcentaje)?.toFixed(1) || '--'}%
+                                        Nivel: {(wsSensorData?.porcentaje || currentValues?.porcentaje)?.toFixed(1) || '--'}%
                                     </p>
                                     <p className="text-sm text-green-700">
-                                        Estado: {wsSensorData?.estado_sudoracion || currentValues?.estado_sudoracion || '--'}
+                                        Estado: {wsSensorData?.estado_hidratacion || currentValues?.estado_hidratacion || '--'}
                                     </p>
+                                    {(wsSensorData?.conductancia || currentValues?.conductancia) && (
+                                        <p className="text-xs text-green-600">
+                                            Conductancia: {(wsSensorData?.conductancia || currentValues?.conductancia)?.toFixed(3) || '--'}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -169,9 +165,7 @@ export default function Configuration() {
                 </div>
             )}
 
-            {/* Configuration Settings - SECCIÓN ELIMINADA */}
-
-            {/* Estadísticas de conexión - ESTA SECCIÓN SE MANTIENE YA QUE UTILIZA EL MISMO HOOK DE WS QUE ESTÁ EN USO */}
+            {/* Estadísticas de conexión WebSocket */}
             {wsConnected && (
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
