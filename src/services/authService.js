@@ -1,5 +1,5 @@
 // src/services/authService.js - CORREGIDO PARA TU BACKEND
-const API_BASE_URL = 'https://vivaltest-back.namixcode.cc';
+const API_BASE_URL = 'http://100.30.168.141:8080';
 
 export const authService = {
     async login(credentials) {

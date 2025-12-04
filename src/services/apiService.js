@@ -1,5 +1,5 @@
 // src/services/apiService.js - ACTUALIZADO PARA SUDORACIÓN
-const API_BASE_URL = 'https://vivaltest-back.namixcode.cc';
+const API_BASE_URL = 'http://100.30.168.141:8080';
 
 class ApiService {
     constructor() {

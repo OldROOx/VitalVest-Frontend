@@ -13,8 +13,8 @@ let state = {
 
 // Configuración
 const CONFIG = {
-    WS_URL: 'ws://100.28.244.240:3000/ws',
-    API_BASE_URL: 'https://vivaltest-back.namixcode.cc',
+    WS_URL: 'ws://100.30.168.141:3000/ws',
+    API_BASE_URL: 'http://100.30.168.141:8080',
     POLLING_INTERVAL: 3000,
     MAX_RECONNECT_ATTEMPTS: 5,
     RECONNECT_INTERVAL: 3000

@@ -165,7 +165,7 @@ export default function Dashboard() {
             <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">
-                        Datos en Tiempo Real (Shared Worker)
+                        Datos en Tiempo Real
                     </h3>
                     <div className="text-xs text-gray-500">
                         Última actualización: {workerStats.lastUpdate ?

@@ -2,7 +2,7 @@
 class WebSocketService {
     constructor() {
         this.ws = null;
-        this.url = 'ws://100.28.244.240:3000/ws'; // Tu servidor WebSocket real
+        this.url = 'ws://100.30.168.141:3000/ws'; // Tu servidor WebSocket real
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectInterval = 3000;
