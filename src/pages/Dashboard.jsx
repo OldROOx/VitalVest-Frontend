@@ -375,10 +375,7 @@ export default function Dashboard() {
                 isConnected={wsConnected || apiConnected}
             />
 
-            <GyroscopeRingChart
-                data={wsSensorData}
-                isConnected={wsConnected}
-            />
+
         </div>
     );
 }

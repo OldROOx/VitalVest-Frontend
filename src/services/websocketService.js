@@ -16,12 +16,12 @@ class WebSocketService {
             onError: []
         };
         this.isEnabled = true;
-        this.isConnecting = false; // ✅ NUEVO: Lock para evitar conexiones múltiples
-        this.messageQueue = []; // ✅ NUEVO: Cola de mensajes durante desconexión
+        this.isConnecting = false; // Lock para evitar conexiones múltiples
+        this.messageQueue = []; // Cola de mensajes durante desconexión
     }
 
     connect() {
-        // ✅ NUEVO: Protección contra conexiones concurrentes
+
         if (this.isConnecting) {
             console.log('⚠️ Ya hay una conexión en progreso');
             return;
