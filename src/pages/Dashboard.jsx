@@ -173,9 +173,7 @@ export default function Dashboard() {
                     <h3 className="text-lg font-semibold text-gray-900">
                         Datos en Tiempo Real
                     </h3>
-                    <div className="text-xs text-gray-500">
-                        Fuente: {wsConnected ? 'WebSocket' : apiConnected ? 'API REST' : 'Sin conexión'}
-                    </div>
+
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">

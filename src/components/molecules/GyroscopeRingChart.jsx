@@ -305,30 +305,7 @@ export const GyroscopeRingChart = ({ data, isConnected = false }) => {
             {statsData && !isLoadingStats && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Gráfico de dona */}
-                    <div className="relative">
-                        <div className="relative h-64 w-64 mx-auto">
-                            <canvas
-                                ref={chartRef}
-                                key={`chart-${statsData.media_pasos || Date.now()}`}
-                                style={{ maxHeight: '256px', maxWidth: '256px' }}
-                            ></canvas>
 
-                            {/* Texto central con estadísticas */}
-                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className="text-2xl font-bold text-gray-800">
-                                    {statsData.media_pasos?.toFixed(0) || '0'}
-                                </span>
-                                <span className="text-sm text-gray-600 text-center">
-                                    Media<br/>Pasos
-                                </span>
-                                {magnitude > 0 && (
-                                    <span className="text-xs text-blue-600 mt-1">
-                                        {magnitude.toFixed(0)}°/s
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
 
                     {/* Leyenda y estadísticas */}
                     <div className="space-y-4 max-h-96 overflow-y-auto">

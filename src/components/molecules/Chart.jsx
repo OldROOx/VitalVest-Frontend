@@ -1,4 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+// src/components/molecules/Chart.jsx - OPTIMIZADO CON USEMEMO
+// ✅ CAMBIOS: Agregado useMemo, useCallback, separación de creación y actualización
+// ⚠️ API COMPATIBLE: Props siguen igual (data, type, title, className)
+
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 
 export const Chart = ({
                           data,
@@ -11,9 +15,23 @@ export const Chart = ({
     const [chartReady, setChartReady] = useState(false)
     const [error, setError] = useState(null)
     const isInitialized = useRef(false)
+    const mountedRef = useRef(true) // ✅ NUEVO: Para cleanup seguro
+
+    // ✅ NUEVO: Memoizar datos procesados para evitar re-renders
+    const processedData = useMemo(() => {
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            return null;
+        }
+
+        return {
+            labels: data.map(item => item.label || 'Sin etiqueta'),
+            values: data.map(item => Number(item.value) || 0),
+            length: data.length
+        };
+    }, [data]);
 
     // Función para limpiar el gráfico anterior
-    const cleanupChart = () => {
+    const cleanupChart = useCallback(() => {
         if (chartInstance.current) {
             try {
                 chartInstance.current.destroy()
@@ -22,7 +40,25 @@ export const Chart = ({
             }
             chartInstance.current = null
         }
-    }
+    }, []);
+
+    // ✅ NUEVO: Actualizar gráfico existente sin recrear (optimización clave)
+    const updateChart = useCallback(() => {
+        if (!chartInstance.current || !processedData) return;
+
+        try {
+            const chart = chartInstance.current;
+            chart.data.labels = processedData.labels;
+            chart.data.datasets[0].data = processedData.values;
+
+            // Update sin animación para mejor performance
+            chart.update('none');
+
+            console.log(`🔄 Gráfica ${type} actualizada (sin recrear)`);
+        } catch (error) {
+            console.error('Error actualizando gráfica:', error);
+        }
+    }, [processedData, type]);
 
     // Inicializar el gráfico una sola vez
     useEffect(() => {
@@ -30,7 +66,7 @@ export const Chart = ({
 
         const initializeChart = async () => {
             // Solo inicializar si no está ya inicializado y tenemos datos
-            if (isInitialized.current || !data || !Array.isArray(data) || data.length === 0) {
+            if (isInitialized.current || !processedData || processedData.length === 0) {
                 return
             }
 
@@ -54,7 +90,7 @@ export const Chart = ({
                     )
                 ])
 
-                if (!mounted) return
+                if (!mounted || !mountedRef.current) return
 
                 const { Chart, registerables } = chartModule
                 Chart.register(...registerables)
@@ -85,7 +121,7 @@ export const Chart = ({
                         mode: 'index'
                     },
                     animation: {
-                        duration: 300, // Animación más rápida para inicialización
+                        duration: 300,
                         easing: 'easeInOutQuart'
                     }
                 }
@@ -96,10 +132,10 @@ export const Chart = ({
                     chartConfig = {
                         type: 'bar',
                         data: {
-                            labels: data.map(item => item.label || 'Sin etiqueta'),
+                            labels: processedData.labels,
                             datasets: [{
                                 label: 'Pasos',
-                                data: data.map(item => Number(item.value) || 0),
+                                data: processedData.values,
                                 backgroundColor: 'rgba(59, 130, 246, 0.8)',
                                 borderColor: '#3B82F6',
                                 borderWidth: 2,
@@ -172,10 +208,10 @@ export const Chart = ({
                     chartConfig = {
                         type: 'line',
                         data: {
-                            labels: data.map(item => item.label || 'Sin etiqueta'),
+                            labels: processedData.labels,
                             datasets: [{
                                 label: 'Temperatura',
-                                data: data.map(item => Number(item.value) || 0),
+                                data: processedData.values,
                                 borderColor: '#3B82F6',
                                 backgroundColor: gradient,
                                 fill: true,
@@ -229,7 +265,7 @@ export const Chart = ({
                                         font: { size: 11 },
                                         maxTicksLimit: 10
                                     },
-                                    title: { // AÑADIDO: Título del eje X para la gráfica de línea
+                                    title: {
                                         display: true,
                                         text: 'Hora',
                                         color: '#374151',
@@ -252,7 +288,7 @@ export const Chart = ({
                 }
 
                 // Crear el gráfico
-                if (mounted) {
+                if (mounted && mountedRef.current) {
                     chartInstance.current = new Chart(ctx, chartConfig)
                     setChartReady(true)
                     isInitialized.current = true
@@ -261,7 +297,7 @@ export const Chart = ({
 
             } catch (error) {
                 console.error('Error creando gráfica:', error)
-                if (mounted) {
+                if (mounted && mountedRef.current) {
                     setError(`Error: ${error.message}`)
                     setChartReady(false)
                 }
@@ -269,7 +305,7 @@ export const Chart = ({
         }
 
         // Inicializar cuando tengamos datos
-        if (data && Array.isArray(data) && data.length > 0) {
+        if (processedData && processedData.length > 0) {
             initializeChart()
         }
 
@@ -277,50 +313,40 @@ export const Chart = ({
         return () => {
             mounted = false
         }
-    }, [data?.length > 0, type]) // Solo se ejecuta cuando tengamos datos o cambie el tipo
+    }, [processedData?.length > 0, type]) // Solo depende de si hay datos y el tipo
 
-    // Actualizar datos del gráfico existente (sin reiniciar)
+    // ✅ OPTIMIZACIÓN: Actualizar datos del gráfico existente (sin reiniciar)
     useEffect(() => {
-        if (chartInstance.current && data && Array.isArray(data) && data.length > 0 && isInitialized.current) {
-            const chart = chartInstance.current
-
-            try {
-                // Actualizar labels y datos
-                chart.data.labels = data.map(item => item.label || 'Sin etiqueta')
-                chart.data.datasets[0].data = data.map(item => Number(item.value) || 0)
-
-                // Actualizar sin animación para cambios incrementales
-                chart.update('none')
-
-                console.log(`🔄 Gráfica ${type} actualizada con nuevos datos (sin reiniciar)`)
-            } catch (error) {
-                console.error('Error actualizando gráfica:', error)
-            }
+        if (chartInstance.current && processedData && processedData.length > 0 && isInitialized.current) {
+            updateChart();
         }
-    }, [data, type])
+    }, [processedData, updateChart])
 
     // Cleanup al desmontar
     useEffect(() => {
+        mountedRef.current = true; // Marcar como montado
+
         return () => {
+            mountedRef.current = false; // Marcar como desmontado
             cleanupChart()
             isInitialized.current = false
         }
-    }, [])
+    }, [cleanupChart])
 
-    // Calcular estadísticas
-    const getStats = () => {
-        if (!data || !Array.isArray(data) || data.length === 0) {
+    // ✅ NUEVO: Calcular estadísticas con useMemo
+    const stats = useMemo(() => {
+        if (!processedData || !Array.isArray(processedData.values) || processedData.values.length === 0) {
             return null
         }
 
         if (type === 'bar') {
-            const totalSteps = data.reduce((sum, item) => sum + (Number(item.value) || 0), 0)
-            const avgSteps = Math.round(totalSteps / data.length)
+            const totalSteps = processedData.values.reduce((sum, item) => sum + item, 0)
+            const avgSteps = Math.round(totalSteps / processedData.values.length)
             return { totalSteps, avgSteps }
         }
 
         if (type === 'line') {
-            const values = data.map(item => Number(item.value) || 0)
+            const values = processedData.values
             const avgTemp = values.reduce((a, b) => a + b, 0) / values.length
             const minTemp = Math.min(...values)
             const maxTemp = Math.max(...values)
@@ -328,9 +354,7 @@ export const Chart = ({
         }
 
         return null
-    }
-
-    const stats = getStats()
+    }, [processedData, type])
 
     return (
         <div className={`p-6 ${className}`}>
@@ -338,9 +362,9 @@ export const Chart = ({
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
                     <div className="flex items-center space-x-2">
-                        {data && Array.isArray(data) && (
+                        {processedData && (
                             <span className="text-sm text-gray-500">
-                                {data.length} puntos
+                                {processedData.length} puntos
                             </span>
                         )}
                         <div className={`w-2 h-2 rounded-full ${
@@ -366,10 +390,10 @@ export const Chart = ({
                                 <div className="mb-2">⚠️</div>
                                 <p className="text-sm">{error}</p>
                                 <p className="text-xs mt-1">
-                                    {data?.length || 0} puntos de datos disponibles
+                                    {processedData?.length || 0} puntos de datos disponibles
                                 </p>
                             </div>
-                        ) : !data || data.length === 0 ? (
+                        ) : !processedData || processedData.length === 0 ? (
                             <div className="text-center text-gray-500">
                                 <div className="mb-2">📊</div>
                                 <p className="text-sm">Esperando datos...</p>
