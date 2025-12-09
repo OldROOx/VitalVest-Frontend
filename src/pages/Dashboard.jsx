@@ -93,8 +93,12 @@ export default function Dashboard() {
 
                 const result = await response.json();
 
-                if (result.MPU && Array.isArray(result.MPU)) {
-                    const sortedData = result.MPU.sort((a, b) =>
+                // FIX: Normalizar la respuesta para manejar si viene como array directo o envuelto en { MPU: [...] }
+                const mpuDataArray = (result.MPU && Array.isArray(result.MPU)) ? result.MPU :
+                    (Array.isArray(result) ? result : null);
+
+                if (mpuDataArray && mpuDataArray.length > 0) {
+                    const sortedData = mpuDataArray.sort((a, b) =>
                         new Date(b.fecha) - new Date(a.fecha)
                     );
 
